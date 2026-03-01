@@ -1,6 +1,12 @@
 name: Example
 description: Logs workflow context, writes a job summary, and upserts a PR comment.
 
+inputs:
+  token:
+    description: GitHub token for API calls
+    required: true
+    default: ${{ github.token }}
+
 runs:
   using: composite
   steps:
@@ -11,4 +17,6 @@ runs:
 
     - name: Run
       shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
       run: ${{ github.action_path }}/example

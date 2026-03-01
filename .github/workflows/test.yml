@@ -23,3 +23,5 @@ jobs:
 
       - name: Test Example
         uses: ./actions/example
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
