@@ -58,7 +58,6 @@ gha-terraform/
 │  ├─ terraform_validate.go
 │  ├─ terraform_plan.go
 │  ├─ terraform_apply.go
-│  └─ tflint_setup.go
 └─ go.mod
 
 Binary: gha-terraform
@@ -93,6 +92,8 @@ fi
 ```
 
 ## Dispatcher action
+
+TODO: the action should cache the downloaded binary so it doesn't need to be downloaded every time.
 
 action.yml
 ```yaml
