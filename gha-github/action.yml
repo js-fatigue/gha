@@ -34,4 +34,6 @@ runs:
         GITHUB_TOKEN: ${{ inputs.token }}
         INPUT_BASE: ${{ inputs.base }}
         INPUT_MAX_DEPTH: ${{ inputs.max_depth }}
-      run: ${{ github.action_path }}/scripts/bootstrap.sh "${{ inputs.command }}"
+      run: |
+        chmod +x ${{ github.action_path }}/scripts/bootstrap.sh
+        ${{ github.action_path }}/scripts/bootstrap.sh "${{ inputs.command }}"
