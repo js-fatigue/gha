@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/google/go-github/v68/github"
@@ -98,12 +100,37 @@ func writeJobSummary(ctx *ac.Context, repo ac.RepoInfo, repoErr error) {
 				{{Data: "Field", Header: true}, {Data: "Value", Header: true}},
 				{{Data: "Owner"}, {Data: repo.Owner}},
 				{{Data: "Repo"}, {Data: repo.Repo}},
-			})
+			}).
+			AddSeparator().
+			AddHeading("Context Hash (SHA-256)", 2).
+			AddCodeBlock(computeContextHash(ctx, repo), "")
 	}
 
 	if err := ac.JobSummary.Write(nil); err != nil {
 		ac.Warning(fmt.Sprintf("could not write job summary: %v", err), nil)
 	}
+}
+
+func computeContextHash(ctx *ac.Context, repo ac.RepoInfo) string {
+	fields := []string{
+		"action=" + ctx.Action,
+		"actor=" + ctx.Actor,
+		"apiURL=" + ctx.APIURL,
+		"event=" + ctx.EventName,
+		"graphqlURL=" + ctx.GraphQLURL,
+		"job=" + ctx.Job,
+		"ref=" + ctx.Ref,
+		"repo=" + repo.Owner + "/" + repo.Repo,
+		"runAttempt=" + fmt.Sprintf("%d", ctx.RunAttempt),
+		"runID=" + fmt.Sprintf("%d", ctx.RunID),
+		"runNumber=" + fmt.Sprintf("%d", ctx.RunNumber),
+		"serverURL=" + ctx.ServerURL,
+		"sha=" + ctx.SHA,
+		"workflow=" + ctx.Workflow,
+	}
+	sort.Strings(fields)
+	sum := sha256.Sum256([]byte(strings.Join(fields, "\n")))
+	return fmt.Sprintf("%x", sum)
 }
 
 func buildCommentBody(ctx *ac.Context, repo ac.RepoInfo) string {
@@ -131,6 +158,8 @@ func buildCommentBody(ctx *ac.Context, repo ac.RepoInfo) string {
 	}
 	sb.WriteString("\n## Repository\n\n")
 	sb.WriteString(fmt.Sprintf("**Owner:** %s  \n**Repo:** %s\n", repo.Owner, repo.Repo))
+	sb.WriteString("\n## Context Hash (SHA-256)\n\n")
+	sb.WriteString(fmt.Sprintf("```\n%s\n```\n", computeContextHash(ctx, repo)))
 	return sb.String()
 }
 
