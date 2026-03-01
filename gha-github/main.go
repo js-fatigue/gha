@@ -32,6 +32,8 @@ func main() {
 	if err := cmd.Dispatch(command); err != nil {
 		ac.SetFailed(err.Error())
 		postErrorPRComment(ctx, command, err)
+	} else {
+		deleteErrorPRComment(ctx)
 	}
 }
 
@@ -120,4 +122,49 @@ outer:
 		return
 	}
 	ac.Info(fmt.Sprintf("Created error PR comment #%d", comment.GetID()))
+}
+
+func deleteErrorPRComment(ctx *ac.Context) {
+	goCtx := context.Background()
+
+	repo, err := ctx.Repo()
+	if err != nil {
+		return
+	}
+
+	client, err := ac.NewClient()
+	if err != nil {
+		return
+	}
+
+	prNumber := resolvePRNumber(ctx, repo, client, goCtx)
+	if prNumber == 0 {
+		return
+	}
+
+	opts := &github.IssueListCommentsOptions{
+		ListOptions: github.ListOptions{PerPage: 100},
+	}
+	for {
+		comments, resp, err := client.Issues.ListComments(goCtx, repo.Owner, repo.Repo, prNumber, opts)
+		if err != nil {
+			ac.Warning(fmt.Sprintf("could not list PR comments: %v", err), nil)
+			return
+		}
+		for _, c := range comments {
+			if strings.Contains(c.GetBody(), prCommentMarker) {
+				_, err = client.Issues.DeleteComment(goCtx, repo.Owner, repo.Repo, c.GetID())
+				if err != nil {
+					ac.Warning(fmt.Sprintf("could not delete stale PR comment: %v", err), nil)
+				} else {
+					ac.Info("Removed stale error PR comment")
+				}
+				return
+			}
+		}
+		if resp.NextPage == 0 {
+			break
+		}
+		opts.Page = resp.NextPage
+	}
 }
