@@ -174,6 +174,7 @@ func upsertPRComment(ctx *ac.Context, repo ac.RepoInfo) {
 	opts := &github.IssueListCommentsOptions{
 		ListOptions: github.ListOptions{PerPage: 100},
 	}
+outer:
 	for {
 		comments, resp, err := client.Issues.ListComments(goCtx, repo.Owner, repo.Repo, prNumber, opts)
 		if err != nil {
@@ -182,15 +183,12 @@ func upsertPRComment(ctx *ac.Context, repo ac.RepoInfo) {
 		}
 		for _, c := range comments {
 			if strings.Contains(c.GetBody(), prCommentMarker) {
-				_, _, err = client.Issues.EditComment(goCtx, repo.Owner, repo.Repo, c.GetID(), &github.IssueComment{
-					Body: github.String(body),
-				})
+				_, err = client.Issues.DeleteComment(goCtx, repo.Owner, repo.Repo, c.GetID())
 				if err != nil {
-					ac.Warning(fmt.Sprintf("could not update PR comment: %v", err), nil)
+					ac.Warning(fmt.Sprintf("could not delete PR comment: %v", err), nil)
 					return
 				}
-				ac.Info(fmt.Sprintf("Updated PR comment #%d", c.GetID()))
-				return
+				break outer
 			}
 		}
 		if resp.NextPage == 0 {
