@@ -2,9 +2,7 @@ package main
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/google/go-github/v68/github"
@@ -25,11 +23,9 @@ func main() {
 
 	repo, repoErr := ctx.Repo()
 
-	hash := computeContextHash(ctx, repo)
-
 	logContext(ctx, repo, repoErr)
-	writeJobSummary(ctx, repo, repoErr, hash)
-	upsertPRComment(ctx, repo, hash)
+	writeJobSummary(ctx, repo, repoErr)
+	upsertPRComment(ctx, repo)
 }
 
 func logContext(ctx *ac.Context, repo ac.RepoInfo, repoErr error) {
@@ -89,7 +85,7 @@ func contextRows(ctx *ac.Context) [][]ac.SummaryTableCell {
 	return rows
 }
 
-func writeJobSummary(ctx *ac.Context, repo ac.RepoInfo, repoErr error, hash string) {
+func writeJobSummary(ctx *ac.Context, repo ac.RepoInfo, repoErr error) {
 	ac.JobSummary.
 		AddHeading("Workflow Context", 2).
 		AddTable(contextRows(ctx)).
@@ -102,10 +98,7 @@ func writeJobSummary(ctx *ac.Context, repo ac.RepoInfo, repoErr error, hash stri
 				{{Data: "Field", Header: true}, {Data: "Value", Header: true}},
 				{{Data: "Owner"}, {Data: repo.Owner}},
 				{{Data: "Repo"}, {Data: repo.Repo}},
-			}).
-			AddSeparator().
-			AddHeading("Context Hash (SHA-256)", 2).
-			AddCodeBlock(hash, "")
+			})
 	}
 
 	if err := ac.JobSummary.Write(nil); err != nil {
@@ -113,29 +106,7 @@ func writeJobSummary(ctx *ac.Context, repo ac.RepoInfo, repoErr error, hash stri
 	}
 }
 
-func computeContextHash(ctx *ac.Context, repo ac.RepoInfo) string {
-	fields := []string{
-		"action=" + ctx.Action,
-		"actor=" + ctx.Actor,
-		"apiURL=" + ctx.APIURL,
-		"event=" + ctx.EventName,
-		"graphqlURL=" + ctx.GraphQLURL,
-		"job=" + ctx.Job,
-		"ref=" + ctx.Ref,
-		"repo=" + repo.Owner + "/" + repo.Repo,
-		"runAttempt=" + fmt.Sprintf("%d", ctx.RunAttempt),
-		"runID=" + fmt.Sprintf("%d", ctx.RunID),
-		"runNumber=" + fmt.Sprintf("%d", ctx.RunNumber),
-		"serverURL=" + ctx.ServerURL,
-		"sha=" + ctx.SHA,
-		"workflow=" + ctx.Workflow,
-	}
-	sort.Strings(fields)
-	sum := sha256.Sum256([]byte(strings.Join(fields, "\n")))
-	return fmt.Sprintf("%x", sum)
-}
-
-func buildCommentBody(ctx *ac.Context, repo ac.RepoInfo, hash string) string {
+func buildCommentBody(ctx *ac.Context, repo ac.RepoInfo) string {
 	var sb strings.Builder
 	sb.WriteString(prCommentMarker + "\n")
 	sb.WriteString("## Workflow Context\n\n")
@@ -160,8 +131,6 @@ func buildCommentBody(ctx *ac.Context, repo ac.RepoInfo, hash string) string {
 	}
 	sb.WriteString("\n## Repository\n\n")
 	sb.WriteString(fmt.Sprintf("**Owner:** %s  \n**Repo:** %s\n", repo.Owner, repo.Repo))
-	sb.WriteString("\n## Context Hash (SHA-256)\n\n")
-	sb.WriteString(fmt.Sprintf("```\n%s\n```\n", hash))
 	return sb.String()
 }
 
@@ -186,7 +155,7 @@ func resolvePRNumber(ctx *ac.Context, repo ac.RepoInfo, client *github.Client, g
 	return prs[0].GetNumber()
 }
 
-func upsertPRComment(ctx *ac.Context, repo ac.RepoInfo, hash string) {
+func upsertPRComment(ctx *ac.Context, repo ac.RepoInfo) {
 	goCtx := context.Background()
 
 	client, err := ac.NewClient()
@@ -200,7 +169,7 @@ func upsertPRComment(ctx *ac.Context, repo ac.RepoInfo, hash string) {
 		return
 	}
 
-	body := buildCommentBody(ctx, repo, hash)
+	body := buildCommentBody(ctx, repo)
 
 	opts := &github.IssueListCommentsOptions{
 		ListOptions: github.ListOptions{PerPage: 100},
