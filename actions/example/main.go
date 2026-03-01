@@ -1,11 +1,8 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"strings"
-
-	"github.com/google/go-github/v68/github"
 
 	ac "github.com/bshore/gha/internal/actions-core"
 )
@@ -25,7 +22,7 @@ func main() {
 
 	logContext(ctx, repo, repoErr)
 	writeJobSummary(ctx, repo, repoErr)
-	upsertPRComment(ctx, repo)
+	ac.UpsertPRComment(ctx, prCommentMarker, buildCommentBody(ctx, repo))
 }
 
 func logContext(ctx *ac.Context, repo ac.RepoInfo, repoErr error) {
@@ -132,77 +129,4 @@ func buildCommentBody(ctx *ac.Context, repo ac.RepoInfo) string {
 	sb.WriteString("\n## Repository\n\n")
 	sb.WriteString(fmt.Sprintf("**Owner:** %s  \n**Repo:** %s\n", repo.Owner, repo.Repo))
 	return sb.String()
-}
-
-func resolvePRNumber(ctx *ac.Context, repo ac.RepoInfo, client *github.Client, goCtx context.Context) int {
-	issueInfo, err := ctx.Issue()
-	if err == nil && issueInfo.Number > 0 {
-		return issueInfo.Number
-	}
-
-	branch := strings.TrimPrefix(ctx.Ref, "refs/heads/")
-	if branch == ctx.Ref {
-		return 0
-	}
-
-	prs, _, err := client.PullRequests.List(goCtx, repo.Owner, repo.Repo, &github.PullRequestListOptions{
-		Head:  repo.Owner + ":" + branch,
-		State: "open",
-	})
-	if err != nil || len(prs) == 0 {
-		return 0
-	}
-	return prs[0].GetNumber()
-}
-
-func upsertPRComment(ctx *ac.Context, repo ac.RepoInfo) {
-	goCtx := context.Background()
-
-	client, err := ac.NewClient()
-	if err != nil {
-		ac.Warning(fmt.Sprintf("skipping PR comment: %v", err), nil)
-		return
-	}
-
-	prNumber := resolvePRNumber(ctx, repo, client, goCtx)
-	if prNumber == 0 {
-		return
-	}
-
-	body := buildCommentBody(ctx, repo)
-
-	opts := &github.IssueListCommentsOptions{
-		ListOptions: github.ListOptions{PerPage: 100},
-	}
-outer:
-	for {
-		comments, resp, err := client.Issues.ListComments(goCtx, repo.Owner, repo.Repo, prNumber, opts)
-		if err != nil {
-			ac.Warning(fmt.Sprintf("could not list PR comments: %v", err), nil)
-			return
-		}
-		for _, c := range comments {
-			if strings.Contains(c.GetBody(), prCommentMarker) {
-				_, err = client.Issues.DeleteComment(goCtx, repo.Owner, repo.Repo, c.GetID())
-				if err != nil {
-					ac.Warning(fmt.Sprintf("could not delete PR comment: %v", err), nil)
-					return
-				}
-				break outer
-			}
-		}
-		if resp.NextPage == 0 {
-			break
-		}
-		opts.Page = resp.NextPage
-	}
-
-	comment, _, err := client.Issues.CreateComment(goCtx, repo.Owner, repo.Repo, prNumber, &github.IssueComment{
-		Body: github.String(body),
-	})
-	if err != nil {
-		ac.Warning(fmt.Sprintf("could not create PR comment: %v", err), nil)
-		return
-	}
-	ac.Info(fmt.Sprintf("Created PR comment #%d", comment.GetID()))
 }
