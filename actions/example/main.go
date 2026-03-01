@@ -134,11 +134,29 @@ func buildCommentBody(ctx *ac.Context, repo ac.RepoInfo) string {
 	return sb.String()
 }
 
-func upsertPRComment(ctx *ac.Context, repo ac.RepoInfo) {
+func resolvePRNumber(ctx *ac.Context, repo ac.RepoInfo, client *github.Client, goCtx context.Context) int {
 	issueInfo, err := ctx.Issue()
-	if err != nil || issueInfo.Number == 0 {
-		return
+	if err == nil && issueInfo.Number > 0 {
+		return issueInfo.Number
 	}
+
+	branch := strings.TrimPrefix(ctx.Ref, "refs/heads/")
+	if branch == ctx.Ref {
+		return 0
+	}
+
+	prs, _, err := client.PullRequests.List(goCtx, repo.Owner, repo.Repo, &github.PullRequestListOptions{
+		Head:  repo.Owner + ":" + branch,
+		State: "open",
+	})
+	if err != nil || len(prs) == 0 {
+		return 0
+	}
+	return prs[0].GetNumber()
+}
+
+func upsertPRComment(ctx *ac.Context, repo ac.RepoInfo) {
+	goCtx := context.Background()
 
 	client, err := ac.NewClient()
 	if err != nil {
@@ -146,10 +164,14 @@ func upsertPRComment(ctx *ac.Context, repo ac.RepoInfo) {
 		return
 	}
 
-	body := buildCommentBody(ctx, repo)
-	goCtx := context.Background()
+	prNumber := resolvePRNumber(ctx, repo, client, goCtx)
+	if prNumber == 0 {
+		return
+	}
 
-	comments, _, err := client.Issues.ListComments(goCtx, issueInfo.Owner, issueInfo.Repo, issueInfo.Number, nil)
+	body := buildCommentBody(ctx, repo)
+
+	comments, _, err := client.Issues.ListComments(goCtx, repo.Owner, repo.Repo, prNumber, nil)
 	if err != nil {
 		ac.Warning(fmt.Sprintf("could not list PR comments: %v", err), nil)
 		return
@@ -157,7 +179,7 @@ func upsertPRComment(ctx *ac.Context, repo ac.RepoInfo) {
 
 	for _, c := range comments {
 		if strings.Contains(c.GetBody(), prCommentMarker) {
-			_, _, err = client.Issues.EditComment(goCtx, issueInfo.Owner, issueInfo.Repo, c.GetID(), &github.IssueComment{
+			_, _, err = client.Issues.EditComment(goCtx, repo.Owner, repo.Repo, c.GetID(), &github.IssueComment{
 				Body: github.String(body),
 			})
 			if err != nil {
@@ -169,7 +191,7 @@ func upsertPRComment(ctx *ac.Context, repo ac.RepoInfo) {
 		}
 	}
 
-	comment, _, err := client.Issues.CreateComment(goCtx, issueInfo.Owner, issueInfo.Repo, issueInfo.Number, &github.IssueComment{
+	comment, _, err := client.Issues.CreateComment(goCtx, repo.Owner, repo.Repo, prNumber, &github.IssueComment{
 		Body: github.String(body),
 	})
 	if err != nil {
