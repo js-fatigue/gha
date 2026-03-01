@@ -25,12 +25,7 @@ jobs:
         with:
           go-version: "1.23"
 
-      - name: Build gha-github
-        run: |
-          mkdir -p "${RUNNER_TEMP}/gha-github/latest"
-          go build -o "${RUNNER_TEMP}/gha-github/latest/gha-github" ./gha-github-dev
-
-      - name: Detect changed directories
+      - name: Build & run gha-github
         id: changed-dirs
         shell: bash
         env:
@@ -38,6 +33,8 @@ jobs:
           INPUT_BASE: main
           INPUT_MAX_DEPTH: "2"
         run: |
+          mkdir -p "${RUNNER_TEMP}/gha-github/latest"
+          go build -o "${RUNNER_TEMP}/gha-github/latest/gha-github" ./gha-github-dev
           ./gha-github-dev changed-dirs
 
       - name: Log output
