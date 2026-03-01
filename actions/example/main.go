@@ -171,24 +171,32 @@ func upsertPRComment(ctx *ac.Context, repo ac.RepoInfo) {
 
 	body := buildCommentBody(ctx, repo)
 
-	comments, _, err := client.Issues.ListComments(goCtx, repo.Owner, repo.Repo, prNumber, nil)
-	if err != nil {
-		ac.Warning(fmt.Sprintf("could not list PR comments: %v", err), nil)
-		return
+	opts := &github.IssueListCommentsOptions{
+		ListOptions: github.ListOptions{PerPage: 100},
 	}
-
-	for _, c := range comments {
-		if strings.Contains(c.GetBody(), prCommentMarker) {
-			_, _, err = client.Issues.EditComment(goCtx, repo.Owner, repo.Repo, c.GetID(), &github.IssueComment{
-				Body: github.String(body),
-			})
-			if err != nil {
-				ac.Warning(fmt.Sprintf("could not update PR comment: %v", err), nil)
-				return
-			}
-			ac.Info(fmt.Sprintf("Updated PR comment #%d", c.GetID()))
+	for {
+		comments, resp, err := client.Issues.ListComments(goCtx, repo.Owner, repo.Repo, prNumber, opts)
+		if err != nil {
+			ac.Warning(fmt.Sprintf("could not list PR comments: %v", err), nil)
 			return
 		}
+		for _, c := range comments {
+			if strings.Contains(c.GetBody(), prCommentMarker) {
+				_, _, err = client.Issues.EditComment(goCtx, repo.Owner, repo.Repo, c.GetID(), &github.IssueComment{
+					Body: github.String(body),
+				})
+				if err != nil {
+					ac.Warning(fmt.Sprintf("could not update PR comment: %v", err), nil)
+					return
+				}
+				ac.Info(fmt.Sprintf("Updated PR comment #%d", c.GetID()))
+				return
+			}
+		}
+		if resp.NextPage == 0 {
+			break
+		}
+		opts.Page = resp.NextPage
 	}
 
 	comment, _, err := client.Issues.CreateComment(goCtx, repo.Owner, repo.Repo, prNumber, &github.IssueComment{
