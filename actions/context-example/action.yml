@@ -1,0 +1,14 @@
+name: Context Example
+description: Prints the GitHub Actions workflow run context using the gha Go SDK.
+
+runs:
+  using: composite
+  steps:
+    - name: Build
+      shell: bash
+      working-directory: ${{ github.action_path }}/../..
+      run: go build -o ${{ github.action_path }}/context-example ./actions/context-example
+
+    - name: Run
+      shell: bash
+      run: ${{ github.action_path }}/context-example
