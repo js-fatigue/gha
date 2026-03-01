@@ -26,16 +26,27 @@ func runChangedDirs() error {
 		}
 	}
 
+	// Resolve base ref: prefer local (e.g. when the branch is checked out),
+	// fall back to origin/<base> (the common case on CI runners where only the
+	// feature branch is checked out and base is a remote-tracking ref only).
+	resolvedBase := base
+	if exec.Command("git", "rev-parse", "--verify", base).Run() != nil {
+		resolvedBase = "origin/" + base
+	}
+
 	// Get changed files via three-dot diff (compares merge base to HEAD,
 	// so diverged branches still produce the correct feature-branch diff).
-	out, err := exec.Command("git", "diff", "--name-only", base+"...HEAD").Output()
+	out, err := exec.Command("git", "diff", "--name-only", resolvedBase+"...HEAD").Output()
 	if err != nil {
-		return fmt.Errorf("git diff %s...HEAD: %w", base, err)
+		if ee, ok := err.(*exec.ExitError); ok && len(ee.Stderr) > 0 {
+			return fmt.Errorf("git diff %s...HEAD: %w\n%s", resolvedBase, err, strings.TrimSpace(string(ee.Stderr)))
+		}
+		return fmt.Errorf("git diff %s...HEAD: %w", resolvedBase, err)
 	}
 
 	// Detect whether HEAD is behind base (HEAD is an ancestor of base).
 	// git merge-base --is-ancestor A B exits 0 if A is an ancestor of B.
-	isBehind := exec.Command("git", "merge-base", "--is-ancestor", "HEAD", base).Run() == nil
+	isBehind := exec.Command("git", "merge-base", "--is-ancestor", "HEAD", resolvedBase).Run() == nil
 
 	// Parse output into unique top-level directories.
 	dirSet := make(map[string]struct{})
