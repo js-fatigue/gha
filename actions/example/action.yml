@@ -19,4 +19,6 @@ runs:
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
-      run: ${{ github.action_path }}/example
+      run: |
+        chmod +x ${{ github.action_path }}/example
+        ${{ github.action_path }}/example
