@@ -25,9 +25,11 @@ func main() {
 
 	repo, repoErr := ctx.Repo()
 
+	hash := computeContextHash(ctx, repo)
+
 	logContext(ctx, repo, repoErr)
-	writeJobSummary(ctx, repo, repoErr)
-	upsertPRComment(ctx, repo)
+	writeJobSummary(ctx, repo, repoErr, hash)
+	upsertPRComment(ctx, repo, hash)
 }
 
 func logContext(ctx *ac.Context, repo ac.RepoInfo, repoErr error) {
@@ -87,7 +89,7 @@ func contextRows(ctx *ac.Context) [][]ac.SummaryTableCell {
 	return rows
 }
 
-func writeJobSummary(ctx *ac.Context, repo ac.RepoInfo, repoErr error) {
+func writeJobSummary(ctx *ac.Context, repo ac.RepoInfo, repoErr error, hash string) {
 	ac.JobSummary.
 		AddHeading("Workflow Context", 2).
 		AddTable(contextRows(ctx)).
@@ -103,7 +105,7 @@ func writeJobSummary(ctx *ac.Context, repo ac.RepoInfo, repoErr error) {
 			}).
 			AddSeparator().
 			AddHeading("Context Hash (SHA-256)", 2).
-			AddCodeBlock(computeContextHash(ctx, repo), "")
+			AddCodeBlock(hash, "")
 	}
 
 	if err := ac.JobSummary.Write(nil); err != nil {
@@ -133,7 +135,7 @@ func computeContextHash(ctx *ac.Context, repo ac.RepoInfo) string {
 	return fmt.Sprintf("%x", sum)
 }
 
-func buildCommentBody(ctx *ac.Context, repo ac.RepoInfo) string {
+func buildCommentBody(ctx *ac.Context, repo ac.RepoInfo, hash string) string {
 	var sb strings.Builder
 	sb.WriteString(prCommentMarker + "\n")
 	sb.WriteString("## Workflow Context\n\n")
@@ -159,7 +161,7 @@ func buildCommentBody(ctx *ac.Context, repo ac.RepoInfo) string {
 	sb.WriteString("\n## Repository\n\n")
 	sb.WriteString(fmt.Sprintf("**Owner:** %s  \n**Repo:** %s\n", repo.Owner, repo.Repo))
 	sb.WriteString("\n## Context Hash (SHA-256)\n\n")
-	sb.WriteString(fmt.Sprintf("```\n%s\n```\n", computeContextHash(ctx, repo)))
+	sb.WriteString(fmt.Sprintf("```\n%s\n```\n", hash))
 	return sb.String()
 }
 
@@ -184,7 +186,7 @@ func resolvePRNumber(ctx *ac.Context, repo ac.RepoInfo, client *github.Client, g
 	return prs[0].GetNumber()
 }
 
-func upsertPRComment(ctx *ac.Context, repo ac.RepoInfo) {
+func upsertPRComment(ctx *ac.Context, repo ac.RepoInfo, hash string) {
 	goCtx := context.Background()
 
 	client, err := ac.NewClient()
@@ -198,7 +200,7 @@ func upsertPRComment(ctx *ac.Context, repo ac.RepoInfo) {
 		return
 	}
 
-	body := buildCommentBody(ctx, repo)
+	body := buildCommentBody(ctx, repo, hash)
 
 	opts := &github.IssueListCommentsOptions{
 		ListOptions: github.ListOptions{PerPage: 100},
