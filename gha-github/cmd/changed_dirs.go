@@ -44,9 +44,11 @@ func runChangedDirs() error {
 		return fmt.Errorf("git diff %s...HEAD: %w", resolvedBase, err)
 	}
 
-	// Detect whether HEAD is behind base (HEAD is an ancestor of base).
-	// git merge-base --is-ancestor A B exits 0 if A is an ancestor of B.
-	isBehind := exec.Command("git", "merge-base", "--is-ancestor", "HEAD", resolvedBase).Run() == nil
+	// Detect whether HEAD is missing commits from base (covers both pure-behind
+	// and diverged cases). Count commits reachable from base but not from HEAD;
+	// any count > 0 means the branch needs a rebase.
+	behindOut, _ := exec.Command("git", "rev-list", "--count", "HEAD.."+resolvedBase).Output()
+	isBehind := strings.TrimSpace(string(behindOut)) != "0"
 
 	// Parse output into unique top-level directories.
 	dirSet := make(map[string]struct{})
