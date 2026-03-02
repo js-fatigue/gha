@@ -64,8 +64,21 @@ jobs:
         dir: ${{ fromJson(needs.changed-dirs.outputs.dir_names) }}
     runs-on: ubuntu-latest
     steps:
-      - name: Log changed action directory
-        if: startsWith(matrix.dir, 'actions/')
-        shell: bash
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+
+      - name: Build gha-github
         run: |
-          echo "Action directory changed: ${{ matrix.dir }}"
+          mkdir -p "${RUNNER_TEMP}/actions/gha-github/latest"
+          go build -o "${RUNNER_TEMP}/actions/gha-github/latest/gha-github" ./actions/gha-github
+
+      - name: Dry-run release
+        if: startsWith(matrix.dir, 'actions/')
+        uses: ./actions/gha-github
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: dry-run-release
+          action_dir: ${{ matrix.dir }}

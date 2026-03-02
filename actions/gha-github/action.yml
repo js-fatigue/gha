@@ -19,6 +19,12 @@ inputs:
       E.g. depth 2 maps "a/b/c" → "a/b".
     required: false
     default: "0"
+  action_dir:
+    description: >
+      Path to the action family directory (e.g. actions/gha-github).
+      Used by the dry-run-release command.
+    required: false
+    default: ""
 
 outputs:
   dir_names:
@@ -34,6 +40,7 @@ runs:
         GITHUB_TOKEN: ${{ inputs.token }}
         INPUT_BASE: ${{ inputs.base }}
         INPUT_MAX_DEPTH: ${{ inputs.max_depth }}
+        INPUT_ACTION_DIR: ${{ inputs.action_dir }}
       run: |
         chmod +x ${{ github.action_path }}/scripts/bootstrap.sh
         ${{ github.action_path }}/scripts/bootstrap.sh "${{ inputs.command }}"
