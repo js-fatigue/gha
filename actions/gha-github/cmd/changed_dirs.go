@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os/exec"
 	"path"
@@ -62,10 +63,10 @@ func runChangedDirs() error {
 		dirs = append(dirs, d)
 	}
 	sort.Strings(dirs)
-	dirNames := strings.Join(dirs, " ")
+	dirNamesJSON, _ := json.Marshal(dirs)
 
 	// Set output before any early return so it is always populated.
-	if err := ac.SetOutput("dir_names", dirNames); err != nil {
+	if err := ac.SetOutput("dir_names", string(dirNamesJSON)); err != nil {
 		ac.Warning(fmt.Sprintf("could not set output: %v", err), nil)
 	}
 
@@ -75,7 +76,7 @@ func runChangedDirs() error {
 	if isBehind {
 		status = "behind"
 		statusEmoji = "❌"
-	} else if dirNames == "" {
+	} else if len(dirs) == 0 {
 		status = "identical"
 		statusEmoji = "➖"
 	}

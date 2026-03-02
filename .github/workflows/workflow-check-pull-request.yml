@@ -1,0 +1,71 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  check-pr-title:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+
+      - name: Build gha-github
+        run: |
+          mkdir -p "${RUNNER_TEMP}/actions/gha-github/latest"
+          go build -o "${RUNNER_TEMP}/actions/gha-github/latest/gha-github" ./actions/gha-github
+
+      - name: Check PR title
+        uses: ./actions/gha-github
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: check-pr-title
+
+  changed-dirs:
+    runs-on: ubuntu-latest
+    outputs:
+      dir_names: ${{ steps.changed-dirs.outputs.dir_names }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+
+      - name: Build gha-github
+        run: |
+          mkdir -p "${RUNNER_TEMP}/actions/gha-github/latest"
+          go build -o "${RUNNER_TEMP}/actions/gha-github/latest/gha-github" ./actions/gha-github
+
+      - name: Detect changed directories
+        id: changed-dirs
+        uses: ./actions/gha-github
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: changed-dirs
+          base: main
+          max_depth: "2"
+
+  check-actions:
+    needs: changed-dirs
+    if: ${{ needs.changed-dirs.outputs.dir_names != '[]' }}
+    strategy:
+      matrix:
+        dir: ${{ fromJson(needs.changed-dirs.outputs.dir_names) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log changed action directory
+        if: startsWith(matrix.dir, 'actions/')
+        shell: bash
+        run: |
+          echo "Action directory changed: ${{ matrix.dir }}"
