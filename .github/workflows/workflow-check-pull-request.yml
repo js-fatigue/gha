@@ -75,10 +75,11 @@ jobs:
           mkdir -p "${RUNNER_TEMP}/actions/gha-github/latest"
           go build -o "${RUNNER_TEMP}/actions/gha-github/latest/gha-github" ./actions/gha-github
 
-      - name: Dry-run release
+      - name: Release (dry run)
         if: startsWith(matrix.dir, 'actions/')
         uses: ./actions/gha-github
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          command: dry-run-release
+          command: release
           action_dir: ${{ matrix.dir }}
+          # release defaults to "false" → dry-run

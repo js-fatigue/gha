@@ -13,33 +13,45 @@ import (
 	ac "github.com/bshore/gha/internal/actions-core"
 )
 
-func init() { Register("dry-run-release", runDryRunRelease) }
+func init() { Register("release", runRelease) }
 
 var conventionalCommitRE = regexp.MustCompile(
 	`^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\([^)]+\))?(!)?: `,
 )
 
-func runDryRunRelease() error {
+func runRelease() error {
 	actionDir, _ := ac.GetInput("action_dir", nil)
 	if actionDir == "" {
-		return fmt.Errorf("action_dir input is required for dry-run-release")
+		return fmt.Errorf("action_dir input is required for release")
 	}
 	familyName := path.Base(actionDir) // e.g. "actions/gha-github" → "gha-github"
+
+	raw, _ := ac.GetInput("release", nil)
+	doRelease := raw == "true"
 
 	ctx, err := ac.NewContext()
 	if err != nil {
 		return fmt.Errorf("reading context: %w", err)
 	}
 
-	if ctx.Payload.PullRequest == nil {
-		return fmt.Errorf("dry-run-release must run on a pull_request event (got %q)", ctx.EventName)
+	var commitTitle string
+	if doRelease {
+		if ctx.Payload.HeadCommit == nil {
+			return fmt.Errorf("release=true requires a push event with head_commit (got %q)", ctx.EventName)
+		}
+		// Use only the first line of the commit message.
+		commitTitle = strings.SplitN(ctx.Payload.HeadCommit.Message, "\n", 2)[0]
+	} else {
+		if ctx.Payload.PullRequest == nil {
+			return fmt.Errorf("release=false requires a pull_request event (got %q)", ctx.EventName)
+		}
+		commitTitle = ctx.Payload.PullRequest.Title
 	}
 
-	title := ctx.Payload.PullRequest.Title
-	ac.Info(fmt.Sprintf("PR title: %q", title))
+	ac.Info(fmt.Sprintf("Commit title: %q", commitTitle))
 	ac.Info(fmt.Sprintf("Action family: %q", familyName))
 
-	bumpType := determineBumpType(title)
+	bumpType := determineBumpType(commitTitle)
 	ac.Info(fmt.Sprintf("Bump type: %s", bumpType))
 
 	client, err := ac.NewClient()
@@ -64,42 +76,83 @@ func runDryRunRelease() error {
 		currentTagDisplay = "_none_"
 	}
 
-	// Write step summary.
-	ac.JobSummary.
-		AddHeading(fmt.Sprintf("Dry-Run Release: `%s`", familyName), 2).
-		AddTable([][]ac.SummaryTableCell{
-			{
-				{Data: "PR Title", Header: true},
-				{Data: "Bump Type", Header: true},
-				{Data: "Current Tag", Header: true},
-				{Data: "Next Tag", Header: true},
+	if doRelease {
+		// Create the GitHub release.
+		releaseBody := fmt.Sprintf("Bump type: %s\n\nTriggered by: %s", bumpType, commitTitle)
+		_, _, err := client.Repositories.CreateRelease(
+			context.Background(),
+			repoInfo.Owner,
+			repoInfo.Repo,
+			&github.RepositoryRelease{
+				TagName: github.Ptr(nextTag),
+				Name:    github.Ptr(nextTag),
+				Body:    github.Ptr(releaseBody),
 			},
-			{
-				{Data: title},
-				{Data: bumpType},
-				{Data: currentTagDisplay},
-				{Data: nextTag},
-			},
-		})
+		)
+		if err != nil {
+			return fmt.Errorf("creating release %s: %w", nextTag, err)
+		}
+		ac.Info(fmt.Sprintf("Created release: %s", nextTag))
 
-	if err := ac.JobSummary.Write(nil); err != nil {
-		ac.Warning(fmt.Sprintf("could not write job summary: %v", err), nil)
+		// Write step summary.
+		ac.JobSummary.
+			AddHeading(fmt.Sprintf("Release: `%s`", familyName), 2).
+			AddTable([][]ac.SummaryTableCell{
+				{
+					{Data: "Commit Title", Header: true},
+					{Data: "Bump Type", Header: true},
+					{Data: "Previous Tag", Header: true},
+					{Data: "Released Tag", Header: true},
+				},
+				{
+					{Data: commitTitle},
+					{Data: bumpType},
+					{Data: currentTagDisplay},
+					{Data: nextTag},
+				},
+			})
+
+		if err := ac.JobSummary.Write(nil); err != nil {
+			ac.Warning(fmt.Sprintf("could not write job summary: %v", err), nil)
+		}
+	} else {
+		// Dry-run: write summary and upsert PR comment.
+		ac.JobSummary.
+			AddHeading(fmt.Sprintf("Dry-Run Release: `%s`", familyName), 2).
+			AddTable([][]ac.SummaryTableCell{
+				{
+					{Data: "PR Title", Header: true},
+					{Data: "Bump Type", Header: true},
+					{Data: "Current Tag", Header: true},
+					{Data: "Next Tag", Header: true},
+				},
+				{
+					{Data: commitTitle},
+					{Data: bumpType},
+					{Data: currentTagDisplay},
+					{Data: nextTag},
+				},
+			})
+
+		if err := ac.JobSummary.Write(nil); err != nil {
+			ac.Warning(fmt.Sprintf("could not write job summary: %v", err), nil)
+		}
+
+		// Upsert PR comment with family-specific marker.
+		marker := fmt.Sprintf("<!-- gha-release-%s -->", familyName)
+		var sb strings.Builder
+		sb.WriteString(marker + "\n")
+		fmt.Fprintf(&sb, "## Dry-Run Release: `%s`\n\n", familyName)
+		sb.WriteString("| PR Title | Bump Type | Current Tag | Next Tag |\n")
+		sb.WriteString("|---|---|---|---|\n")
+		fmt.Fprintf(&sb, "| %s | %s | %s | `%s` |\n", commitTitle, bumpType, currentTagDisplay, nextTag)
+		ac.UpsertPRComment(ctx, marker, sb.String())
 	}
-
-	// Upsert PR comment with family-specific marker.
-	marker := fmt.Sprintf("<!-- gha-dry-run-release-%s -->", familyName)
-	var sb strings.Builder
-	sb.WriteString(marker + "\n")
-	fmt.Fprintf(&sb, "## Dry-Run Release: `%s`\n\n", familyName)
-	sb.WriteString("| PR Title | Bump Type | Current Tag | Next Tag |\n")
-	sb.WriteString("|---|---|---|---|\n")
-	fmt.Fprintf(&sb, "| %s | %s | %s | `%s` |\n", title, bumpType, currentTagDisplay, nextTag)
-	ac.UpsertPRComment(ctx, marker, sb.String())
 
 	return nil
 }
 
-// determineBumpType returns "major", "minor", or "patch" based on the PR title.
+// determineBumpType returns "major", "minor", or "patch" based on the commit title.
 func determineBumpType(title string) string {
 	m := conventionalCommitRE.FindStringSubmatch(title)
 	if m == nil {

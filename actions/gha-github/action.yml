@@ -22,9 +22,15 @@ inputs:
   action_dir:
     description: >
       Path to the action family directory (e.g. actions/gha-github).
-      Used by the dry-run-release command.
+      Used by the release command.
     required: false
     default: ""
+  release:
+    description: >
+      When true, create the GitHub release. When false (default), dry-run only.
+      Used by the release command.
+    required: false
+    default: "false"
 
 outputs:
   dir_names:
@@ -41,6 +47,7 @@ runs:
         INPUT_BASE: ${{ inputs.base }}
         INPUT_MAX_DEPTH: ${{ inputs.max_depth }}
         INPUT_ACTION_DIR: ${{ inputs.action_dir }}
+        INPUT_RELEASE: ${{ inputs.release }}
       run: |
         chmod +x ${{ github.action_path }}/scripts/bootstrap.sh
         ${{ github.action_path }}/scripts/bootstrap.sh "${{ inputs.command }}"

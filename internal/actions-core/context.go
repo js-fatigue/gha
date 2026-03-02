@@ -49,6 +49,11 @@ type CommentPayload struct {
 	ID int `json:"id"`
 }
 
+// HeadCommitPayload mirrors the head_commit field in push event payloads.
+type HeadCommitPayload struct {
+	Message string `json:"message"`
+}
+
 // WebhookPayload represents the parsed GitHub webhook event payload.
 type WebhookPayload struct {
 	Repository   *PayloadRepository   `json:"repository"`
@@ -58,6 +63,7 @@ type WebhookPayload struct {
 	Action       string               `json:"action"`
 	Installation *InstallationPayload `json:"installation"`
 	Comment      *CommentPayload      `json:"comment"`
+	HeadCommit   *HeadCommitPayload   `json:"head_commit"`
 }
 
 // Context holds the GitHub Actions workflow run context, mirroring the
