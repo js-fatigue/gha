@@ -28,7 +28,7 @@ func UpsertPRComment(ctx *Context, marker, body string) {
 	}
 	deletePRCommentByMarker(repo, client, goCtx, prNumber, marker)
 	comment, _, err := client.Issues.CreateComment(goCtx, repo.Owner, repo.Repo, prNumber,
-		&github.IssueComment{Body: github.String(body)})
+		&github.IssueComment{Body: &body})
 	if err != nil {
 		Warning(fmt.Sprintf("could not create PR comment: %v", err), nil)
 		return

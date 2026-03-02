@@ -37,7 +37,7 @@ func main() {
 func buildErrorCommentBody(command string, cmdErr error) string {
 	var sb strings.Builder
 	sb.WriteString(prCommentMarker + "\n")
-	sb.WriteString(fmt.Sprintf("## GitHub Actions `%s` Failed\n\n", command))
-	sb.WriteString(fmt.Sprintf("**Error:** %s\n", cmdErr.Error()))
+	fmt.Fprintf(&sb, "## GitHub Actions `%s` Failed\n\n", command)
+	fmt.Fprintf(&sb, "**Error:** %s\n", cmdErr.Error())
 	return sb.String()
 }

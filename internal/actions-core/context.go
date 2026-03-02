@@ -31,6 +31,7 @@ type PullRequestPayload struct {
 	Number  int    `json:"number"`
 	HTMLURL string `json:"html_url"`
 	Body    string `json:"body"`
+	Title   string `json:"title"`
 }
 
 // SenderPayload mirrors the sender field in the webhook payload.
