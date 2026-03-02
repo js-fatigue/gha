@@ -7,7 +7,7 @@ set -euo pipefail
 
 REPO="bshore/gha"
 BINARY_NAME="gha-github"
-CACHE_DIR="${RUNNER_TEMP:-/tmp}/gha-github"
+CACHE_DIR="${RUNNER_TEMP:-/tmp}/actions/gha-github"
 
 # Normalize OS
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"

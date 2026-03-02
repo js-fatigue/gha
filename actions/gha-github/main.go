@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/bshore/gha/gha-github/cmd"
+	"github.com/bshore/gha/actions/gha-github/cmd"
 	ac "github.com/bshore/gha/internal/actions-core"
 )
 

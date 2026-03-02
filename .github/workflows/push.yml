@@ -27,12 +27,12 @@ jobs:
 
       - name: Build gha-github
         run: |
-          mkdir -p "${RUNNER_TEMP}/gha-github/latest"
-          go build -o "${RUNNER_TEMP}/gha-github/latest/gha-github" ./gha-github
+          mkdir -p "${RUNNER_TEMP}/actions/gha-github/latest"
+          go build -o "${RUNNER_TEMP}/actions/gha-github/latest/gha-github" ./actions/gha-github
 
       - name: Detect changed directories
         id: changed-dirs
-        uses: ./gha-github
+        uses: ./actions/gha-github
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: changed-dirs
