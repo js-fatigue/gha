@@ -1,4 +1,4 @@
-# Skill: Add a new command to an existing `gha-<family>` action
+# Skill: Add a new command to an existing `<family>` action
 
 **Trigger:** User wants to add a new command to an existing action family.
 
@@ -137,7 +137,7 @@ a command-specific comment (rare). If so:
 
 ```go
 // In your command function, the marker is defined in main.go:
-// const prCommentMarker = "<!-- gha-<family>-error -->"
+// const prCommentMarker = "<!-- <family>-error -->"
 // Pass it through if needed, or define a sub-marker for the command.
 ```
 
@@ -191,5 +191,5 @@ outputs:
 - [ ] New inputs added to `action.yml` inputs block
 - [ ] New inputs forwarded in `action.yml` run step `env:` block as `INPUT_<NAME>`
 - [ ] New outputs added to `action.yml` outputs block if applicable
-- [ ] `go build ./actions/gha-<family>/...` — compiles cleanly
-- [ ] `go vet ./actions/gha-<family>/...` — no issues
+- [ ] `go build ./actions/<family>/...` — compiles cleanly
+- [ ] `go vet ./actions/<family>/...` — no issues

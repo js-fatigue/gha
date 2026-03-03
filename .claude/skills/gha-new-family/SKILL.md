@@ -1,13 +1,13 @@
-# Skill: Scaffold a new `gha-<family>` action family
+# Skill: Scaffold a new `<family>` action family
 
-**Trigger:** User wants to scaffold or create a new `gha-<family>` action family in this project.
+**Trigger:** User wants to scaffold or create a new `<family>` action family in this project.
 
 ---
 
 ## Directory structure
 
 ```
-actions/gha-<family>/
+actions/<family>/
 ├── main.go
 ├── action.yml
 ├── cmd/
@@ -33,17 +33,17 @@ import (
     "os"
     "strings"
 
-    "github.com/bshore/gha/actions/gha-<family>/cmd"
+    "github.com/bshore/gha/actions/<family>/cmd"
     ac "github.com/bshore/gha/internal/actions-core"
 )
 
-const prCommentMarker = "<!-- gha-<family>-error -->"
+const prCommentMarker = "<!-- <family>-error -->"
 
 func main() {
     defer ac.Exit()
 
     if len(os.Args) < 2 {
-        ac.SetFailed("usage: gha-<family> <command>")
+        ac.SetFailed("usage: <family> <command>")
         return
     }
     command := os.Args[1]
@@ -137,7 +137,7 @@ Key rules:
 - Every family-specific input **must** be forwarded in the `run` step `env:` block as `INPUT_<NAME>`.
 - Input names **must use underscores** (not hyphens) — `ac.GetInput` only replaces spaces→underscores.
 - Cache vars: `GHA_<FAMILY>_VERSION` (uppercased family name).
-- Cache path: `${{ runner.temp }}/actions/gha-<family>`.
+- Cache path: `${{ runner.temp }}/actions/<family>`.
 
 ```yaml
 name: <Family> Actions
@@ -186,10 +186,10 @@ runs:
     - uses: actions/cache@v4
       if: inputs.cache == 'true'
       with:
-        path: ${{ runner.temp }}/actions/gha-<family>
-        key: gha-<family>-${{ runner.os }}-${{ runner.arch }}-${{ steps.version.outputs.tag }}
+        path: ${{ runner.temp }}/actions/<family>
+        key: <family>-${{ runner.os }}-${{ runner.arch }}-${{ steps.version.outputs.tag }}
         restore-keys: |
-          gha-<family>-${{ runner.os }}-${{ runner.arch }}-
+          <family>-${{ runner.os }}-${{ runner.arch }}-
 
     - id: run
       shell: bash
@@ -213,8 +213,8 @@ Change three variables: `BINARY_NAME`, `CACHE_DIR`, `RELEASE_TAG` env var name.
 set -euo pipefail
 
 REPO="bshore/gha"
-BINARY_NAME="gha-<family>"
-CACHE_DIR="${RUNNER_TEMP:-/tmp}/actions/gha-<family>"
+BINARY_NAME="<family>"
+CACHE_DIR="${RUNNER_TEMP:-/tmp}/actions/<family>"
 
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
 ARCH="$(uname -m)"
@@ -227,7 +227,7 @@ RELEASE_TAG="${GHA_<FAMILY>_VERSION:-latest}"
 BINARY_PATH="${CACHE_DIR}/${RELEASE_TAG}/${BINARY_NAME}"
 
 if [[ -x "$BINARY_PATH" ]]; then
-  echo "gha-<family>: using cached binary at ${BINARY_PATH}"
+  echo "<family>: using cached binary at ${BINARY_PATH}"
   exec "$BINARY_PATH" "$@"
 fi
 
@@ -240,7 +240,7 @@ else
   DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${RELEASE_TAG}/${ASSET_NAME}"
 fi
 
-echo "gha-<family>: downloading from ${DOWNLOAD_URL}"
+echo "<family>: downloading from ${DOWNLOAD_URL}"
 curl -fsSL -o "$BINARY_PATH" "$DOWNLOAD_URL"
 
 if [[ "$RELEASE_TAG" == "latest" ]]; then
@@ -251,19 +251,19 @@ fi
 
 EXPECTED=$(curl -fsSL "$CHECKSUM_URL" | awk "/^[0-9a-f]+ +${ASSET_NAME}\$/ {print \$1}")
 if [[ -z "$EXPECTED" ]]; then
-  echo "gha-<family>: ${ASSET_NAME} not found in checksums.txt" >&2
+  echo "<family>: ${ASSET_NAME} not found in checksums.txt" >&2
   rm -f "$BINARY_PATH"
   exit 1
 fi
 ACTUAL=$(sha256sum "$BINARY_PATH" | cut -d' ' -f1)
 if [[ "$EXPECTED" != "$ACTUAL" ]]; then
-  echo "gha-<family>: checksum mismatch for ${ASSET_NAME}" >&2
+  echo "<family>: checksum mismatch for ${ASSET_NAME}" >&2
   echo "  expected: ${EXPECTED}" >&2
   echo "  actual:   ${ACTUAL}" >&2
   rm -f "$BINARY_PATH"
   exit 1
 fi
-echo "gha-<family>: checksum OK"
+echo "<family>: checksum OK"
 
 chmod +x "$BINARY_PATH"
 exec "$BINARY_PATH" "$@"
@@ -273,9 +273,9 @@ exec "$BINARY_PATH" "$@"
 
 ## Checklist
 
-- [ ] `go build ./actions/gha-<family>/...` — compiles cleanly
-- [ ] `go vet ./actions/gha-<family>/...` — no issues
+- [ ] `go build ./actions/<family>/...` — compiles cleanly
+- [ ] `go vet ./actions/<family>/...` — no issues
 - [ ] All inputs forwarded as `INPUT_<NAME>` in `action.yml` run step env block
 - [ ] Input names use underscores only
-- [ ] PR comment marker is `<!-- gha-<family>-error -->`
+- [ ] PR comment marker is `<!-- <family>-error -->`
 - [ ] `cache: "false"` set in CI workflows that build from source
