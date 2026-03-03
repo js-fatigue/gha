@@ -105,6 +105,9 @@ func runRelease() error {
 			return fmt.Errorf("creating release %s: %w", nextTag, err)
 		}
 		ac.Info(fmt.Sprintf("Created release: %s", nextTag))
+		if err := ac.SetOutput("next_tag", nextTag); err != nil {
+			ac.Warning(fmt.Sprintf("could not set next_tag output: %v", err), nil)
+		}
 
 		// Write step summary.
 		ac.JobSummary.
