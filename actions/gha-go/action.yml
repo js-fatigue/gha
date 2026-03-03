@@ -1,0 +1,74 @@
+name: Go Actions
+description: Runs Go-specific commands via a compiled Go binary.
+
+inputs:
+  token:
+    description: GitHub token for API calls
+    required: true
+    default: ${{ github.token }}
+  command:
+    description: Command to run (e.g. build)
+    required: true
+  working_directory:
+    description: Package or directory to build (default ".")
+    required: false
+    default: "."
+  output:
+    description: Output binary path (empty = Go default)
+    required: false
+    default: ""
+  ldflags:
+    description: Extra ldflags to pass to go build
+    required: false
+    default: ""
+  cgo_enabled:
+    description: Value to set for CGO_ENABLED (default "0")
+    required: false
+    default: "0"
+  cache:
+    description: >
+      When true (default), cache the downloaded binary using actions/cache.
+      Set to false when the binary is built from source in the same job.
+    required: false
+    default: "true"
+
+outputs:
+  binary_path:
+    description: Path to the compiled binary (only set when output is non-empty)
+    value: ${{ steps.run.outputs.binary_path }}
+
+runs:
+  using: composite
+  steps:
+    - id: version
+      if: inputs.cache == 'true'
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+      run: |
+        v="${GHA_GO_VERSION:-}"
+        if [[ -z "$v" ]]; then
+          v=$(gh release view --repo bshore/gha latest --json tagName -q .tagName 2>/dev/null || echo "latest")
+        fi
+        echo "tag=${v}" >> "$GITHUB_OUTPUT"
+
+    - uses: actions/cache@v4
+      if: inputs.cache == 'true'
+      with:
+        path: ${{ runner.temp }}/actions/gha-go
+        key: gha-go-${{ runner.os }}-${{ runner.arch }}-${{ steps.version.outputs.tag }}
+        restore-keys: |
+          gha-go-${{ runner.os }}-${{ runner.arch }}-
+
+    - id: run
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+        INPUT_WORKING_DIRECTORY: ${{ inputs.working_directory }}
+        INPUT_OUTPUT: ${{ inputs.output }}
+        INPUT_LDFLAGS: ${{ inputs.ldflags }}
+        INPUT_CGO_ENABLED: ${{ inputs.cgo_enabled }}
+        GHA_GO_VERSION: ${{ steps.version.outputs.tag }}
+      run: |
+        chmod +x ${{ github.action_path }}/scripts/bootstrap.sh
+        ${{ github.action_path }}/scripts/bootstrap.sh "${{ inputs.command }}"
