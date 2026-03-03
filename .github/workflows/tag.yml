@@ -57,6 +57,7 @@ jobs:
           go build -o "${RUNNER_TEMP}/actions/gha-github/latest/gha-github" ./actions/gha-github
 
       - name: Release
+        id: release
         if: startsWith(matrix.dir, 'actions/')
         uses: ./actions/gha-github
         with:
@@ -65,3 +66,25 @@ jobs:
           command: release
           action_dir: ${{ matrix.dir }}
           release: "true"
+
+      - name: Build and upload release assets
+        if: startsWith(matrix.dir, 'actions/')
+        env:
+          CGO_ENABLED: "0"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          FAMILY=$(basename "${{ matrix.dir }}")
+          GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-w -s -buildid=" \
+            -o "${FAMILY}-linux-amd64" \
+            ./${{ matrix.dir }}
+          GOOS=linux GOARCH=arm64 go build -trimpath -ldflags="-w -s -buildid=" \
+            -o "${FAMILY}-linux-arm64" \
+            ./${{ matrix.dir }}
+          sha256sum \
+            "${FAMILY}-linux-amd64" \
+            "${FAMILY}-linux-arm64" \
+            > checksums.txt
+          gh release upload "${{ steps.release.outputs.next_tag }}" \
+            "${FAMILY}-linux-amd64" \
+            "${FAMILY}-linux-arm64" \
+            checksums.txt

@@ -42,6 +42,9 @@ outputs:
   dir_names:
     description: JSON array of unique directories with changed files (e.g. ["actions/gha-github"])
     value: ${{ steps.run.outputs.dir_names }}
+  next_tag:
+    description: Tag created and released (only set when command=release and release=true)
+    value: ${{ steps.run.outputs.next_tag }}
 
 runs:
   using: composite
