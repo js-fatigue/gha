@@ -12,7 +12,7 @@ jobs:
   check-pr-title:
     runs-on: ubuntu-latest
     steps:
-      - uses: bshore/gha/actions/github@github-v0.2.0
+      - uses: bshore/gha/actions/github@github-v0.2.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
@@ -39,7 +39,7 @@ jobs:
     outputs:
       dir_names: ${{ steps.changed-dirs.outputs.dir_names }}
     steps:
-      - uses: bshore/gha/actions/github@github-v0.2.0
+      - uses: bshore/gha/actions/github@github-v0.2.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
@@ -71,7 +71,7 @@ jobs:
         dir: ${{ fromJson(needs.changed-dirs.outputs.dir_names) }}
     runs-on: ubuntu-latest
     steps:
-      - uses: bshore/gha/actions/github@github-v0.2.0
+      - uses: bshore/gha/actions/github@github-v0.2.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
