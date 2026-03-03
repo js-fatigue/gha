@@ -16,7 +16,6 @@ jobs:
     steps:
       - uses: bshore/gha/actions/github@github-v0.2.1
         with:
-          cache: true
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
           checkout_input: '{"ref": "${{ github.ref_name }}", "fetch_depth": 0}'
@@ -49,7 +48,6 @@ jobs:
     steps:
       - uses: bshore/gha/actions/github@github-v0.2.1
         with:
-          cache: true
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
           checkout_input: '{"ref": "${{ github.ref_name }}"}'
