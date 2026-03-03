@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os/exec"
 	"path"
 	"regexp"
 	"strconv"
@@ -77,7 +78,18 @@ func runRelease() error {
 	}
 
 	if doRelease {
-		// Create the GitHub release.
+		// Push the git tag first so the tag-push event triggers the release
+		// asset workflow. Releases created solely via the REST API do not fire
+		// push-tag events and therefore would never trigger release.yml.
+		if out, err := exec.Command("git", "tag", nextTag).CombinedOutput(); err != nil {
+			return fmt.Errorf("creating git tag %s: %w\n%s", nextTag, err, out)
+		}
+		if out, err := exec.Command("git", "push", "origin", nextTag).CombinedOutput(); err != nil {
+			return fmt.Errorf("pushing git tag %s: %w\n%s", nextTag, err, out)
+		}
+		ac.Info(fmt.Sprintf("Pushed tag: %s", nextTag))
+
+		// Create the GitHub release against the now-existing tag.
 		releaseBody := fmt.Sprintf("Bump type: %s\n\nTriggered by: %s", bumpType, commitTitle)
 		_, _, err := client.Repositories.CreateRelease(
 			context.Background(),
