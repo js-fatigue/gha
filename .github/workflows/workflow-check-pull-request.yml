@@ -26,6 +26,7 @@ jobs:
       - name: Check PR title
         uses: ./actions/gha-github
         with:
+          cache: "false"
           token: ${{ secrets.GITHUB_TOKEN }}
           command: check-pr-title
 
@@ -51,6 +52,7 @@ jobs:
         id: changed-dirs
         uses: ./actions/gha-github
         with:
+          cache: "false"
           token: ${{ secrets.GITHUB_TOKEN }}
           command: changed-dirs
           base: main
@@ -79,6 +81,7 @@ jobs:
         if: startsWith(matrix.dir, 'actions/')
         uses: ./actions/gha-github
         with:
+          cache: "false"
           token: ${{ secrets.GITHUB_TOKEN }}
           command: release
           action_dir: ${{ matrix.dir }}

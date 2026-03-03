@@ -31,6 +31,12 @@ inputs:
       Used by the release command.
     required: false
     default: "false"
+  cache:
+    description: >
+      When true (default), cache the downloaded binary using actions/cache.
+      Set to false when the binary is built from source in the same job.
+    required: false
+    default: "true"
 
 outputs:
   dir_names:
@@ -40,6 +46,26 @@ outputs:
 runs:
   using: composite
   steps:
+    - id: version
+      if: inputs.cache == 'true'
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+      run: |
+        v="${GHA_GITHUB_VERSION:-}"
+        if [[ -z "$v" ]]; then
+          v=$(gh release view --repo bshore/gha latest --json tagName -q .tagName 2>/dev/null || echo "latest")
+        fi
+        echo "tag=${v}" >> "$GITHUB_OUTPUT"
+
+    - uses: actions/cache@v4
+      if: inputs.cache == 'true'
+      with:
+        path: ${{ runner.temp }}/actions/gha-github
+        key: gha-github-${{ runner.os }}-${{ runner.arch }}-${{ steps.version.outputs.tag }}
+        restore-keys: |
+          gha-github-${{ runner.os }}-${{ runner.arch }}-
+
     - id: run
       shell: bash
       env:
@@ -48,6 +74,7 @@ runs:
         INPUT_MAX_DEPTH: ${{ inputs.max_depth }}
         INPUT_ACTION_DIR: ${{ inputs.action_dir }}
         INPUT_RELEASE: ${{ inputs.release }}
+        GHA_GITHUB_VERSION: ${{ steps.version.outputs.tag }}
       run: |
         chmod +x ${{ github.action_path }}/scripts/bootstrap.sh
         ${{ github.action_path }}/scripts/bootstrap.sh "${{ inputs.command }}"

@@ -31,6 +31,7 @@ jobs:
         id: changed-dirs
         uses: ./actions/gha-github
         with:
+          cache: "false"
           token: ${{ secrets.GITHUB_TOKEN }}
           command: changed-dirs
           base: ${{ github.event.before }}
@@ -59,6 +60,7 @@ jobs:
         if: startsWith(matrix.dir, 'actions/')
         uses: ./actions/gha-github
         with:
+          cache: "false"
           token: ${{ secrets.GITHUB_TOKEN }}
           command: release
           action_dir: ${{ matrix.dir }}
