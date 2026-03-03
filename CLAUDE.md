@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Go-based framework for writing GitHub Actions. The goal is to replace bash/Python/JavaScript action steps with compiled Go binaries for better performance and lower-level control. Actions are organized into "families" (e.g., `gha-github`), each compiled to a standalone binary and distributed via GitHub Releases.
+This is a Go-based framework for writing GitHub Actions. The goal is to replace bash/Python/JavaScript action steps with compiled Go binaries for better performance and lower-level control. Actions are organized into "families" (e.g., `github`), each compiled to a standalone binary and distributed via GitHub Releases.
 
 ## Commands
 
@@ -13,8 +13,8 @@ This is a Go-based framework for writing GitHub Actions. The goal is to replace 
 go build ./...
 
 # Build a specific action binary
-go build -o actions/gha-github/gha-github ./actions/gha-github
-go build -o actions/gha-go/gha-go ./actions/gha-go
+go build -o actions/github/github ./actions/github
+go build -o actions/go/go ./actions/go
 
 # Run all tests
 go test ./...
@@ -46,7 +46,7 @@ A Go port of the TypeScript `@actions/core` and `@actions/github` packages. Impo
 ### Action Family Structure — `actions/<family>/`
 
 ```
-actions/gha-<family>/
+actions/<family>/
 ├── action.yml          # composite: runs bootstrap.sh then the binary
 ├── main.go             # reads os.Args[1] → cmd.Dispatch(); on error → upsert PR comment
 ├── cmd/
@@ -61,7 +61,7 @@ Commands self-register using `init()`:
 func init() { Register("command-name", runCommand) }
 ```
 
-#### Current family: `gha-github`
+#### Current family: `github`
 
 | Command | Description |
 |---------|-------------|
@@ -69,7 +69,7 @@ func init() { Register("command-name", runCommand) }
 | `changed-dirs` | Lists directories changed between base and HEAD via `git diff` |
 | `release` | Semantic versioning — bumps version and creates GitHub Releases |
 
-#### Current family: `gha-go`
+#### Current family: `go`
 
 | Command | Description |
 |---------|-------------|
@@ -80,7 +80,7 @@ The `main.go` pattern:
 2. Read command from `os.Args[1]`
 3. `ac.NewContext()` to get webhook context
 4. `cmd.Dispatch(command)` to run the command
-5. On error: upsert PR comment with marker `<!-- gha-github-error -->` and call `ac.SetFailed()`
+5. On error: upsert PR comment with marker `<!-- github-error -->` and call `ac.SetFailed()`
 6. On success: delete stale error comment via `ac.DeletePRComment()`
 
 ### Key Conventions
@@ -98,7 +98,7 @@ env:
 **Command dispatch via `os.Args[1]`**
 The `command` input is passed as a CLI argument, not an env var:
 ```yaml
-run: ${{ github.action_path }}/gha-<family> "${{ inputs.command }}"
+run: ${{ github.action_path }}/<family> "${{ inputs.command }}"
 ```
 
 **Boolean input helper**
@@ -117,10 +117,10 @@ Use HTML marker comments for idempotent updates. Call `ac.UpsertPRComment(ctx, m
 **Binary caching (`cache` input)**
 `action.yml` has a `cache` input (default `"true"`). When true, two steps run before bootstrap:
 1. `version` — resolves the tag via `gh release view` (falls back to `"latest"`), writes to `steps.version.outputs.tag`
-2. `actions/cache@v4` — path `$RUNNER_TEMP/actions/gha-<family>`, key `gha-<family>-<OS>-<arch>-<tag>`, restore-key prefix `gha-<family>-<OS>-<arch>-`
+2. `actions/cache@v4` — path `$RUNNER_TEMP/actions/<family>`, key `<family>-<OS>-<arch>-<tag>`, restore-key prefix `<family>-<OS>-<arch>-`
 
 `GHA_<FAMILY>_VERSION` is forwarded to `bootstrap.sh` so it targets the resolved tag directory.
-**Source-build callers must pass `cache: "false"`** to skip these steps (the binary is already in `$RUNNER_TEMP/actions/gha-<family>/latest/`).
+**Source-build callers must pass `cache: "false"`** to skip these steps (the binary is already in `$RUNNER_TEMP/actions/<family>/latest/`).
 
 **Exit handling**
 - All `actions-core` functions that write to files return `error`; propagate with `ac.SetFailed`.
@@ -138,9 +138,9 @@ Two workflow files in `.github/workflows/`:
 | `pull-request.yml` | PR opened/edited/synchronized/reopened | Validates PR title; detects changed dirs; runs `release` in dry-run mode to preview version bump |
 | `tag.yml` | Push to `main` | Detects changed action dirs; runs `release` with `release=true`; cross-compiles linux-amd64/arm64 binaries and uploads to the release |
 
-All CI workflows pass `cache: "false"` to any `gha-*` action step because the binary is built from source earlier in the same job.
+All CI workflows pass `cache: "false"` to action steps because the binary is built from source earlier in the same job.
 
-The `release` command tags format: `<family>-v<MAJOR>.<MINOR>.<PATCH>` (e.g., `gha-github-v1.0.0`). Bump type is inferred from the commit/PR title using conventional commit conventions (`!` = major, `feat` = minor, everything else = patch).
+The `release` command tags format: `<family>-v<MAJOR>.<MINOR>.<PATCH>` (e.g., `github-v1.0.0`). Bump type is inferred from the commit/PR title using conventional commit conventions (`!` = major, `feat` = minor, everything else = patch).
 
 ## Claude Skills
 
@@ -148,8 +148,8 @@ Project-level skills live in `.claude/skills/` and are invoked via the Skill too
 
 | Skill | Trigger |
 |-------|---------|
-| `gha-new-family` | Scaffold a new `gha-<family>` action family |
-| `gha-new-command` | Add a new command to an existing `gha-<family>` action |
+| `gha-new-family` | Scaffold a new `<family>` action family |
+| `gha-new-command` | Add a new command to an existing `<family>` action |
 
 ## Module
 

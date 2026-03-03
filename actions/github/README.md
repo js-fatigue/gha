@@ -1,4 +1,4 @@
-# gha-github
+# github
 
 A composite GitHub Action that runs GitHub-specific automation commands via a compiled Go binary.
 
@@ -18,7 +18,7 @@ A composite GitHub Action that runs GitHub-specific automation commands via a co
 | `command` | **yes** | — | Command to run (see Commands above) |
 | `base` | no | `"main"` | Base ref or SHA to compare against (`changed-dirs`, `release`) |
 | `max_depth` | no | `"0"` | Max directory depth returned by `changed-dirs` (0 = unlimited) |
-| `action_dir` | no | `""` | Path to the action family directory, e.g. `actions/gha-github` (required by `release`) |
+| `action_dir` | no | `""` | Path to the action family directory, e.g. `actions/github` (required by `release`) |
 | `release` | no | `"false"` | Set to `"true"` to publish the release; omit for dry-run |
 | `cache` | no | `"true"` | Cache the downloaded binary. Set to `"false"` when building from source in the same job |
 
@@ -26,7 +26,7 @@ A composite GitHub Action that runs GitHub-specific automation commands via a co
 
 | Output | Description |
 |---|---|
-| `dir_names` | JSON array of unique directories containing changed files, e.g. `["actions/gha-github"]` |
+| `dir_names` | JSON array of unique directories containing changed files, e.g. `["actions/github"]` |
 
 ## Usage
 
@@ -45,7 +45,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: bshore/gha/actions/gha-github@gha-github-v1.0.0
+      - uses: bshore/gha/actions/github@github-v1.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: check-pr-title
@@ -67,7 +67,7 @@ jobs:
           fetch-depth: 0
 
       - id: changed
-        uses: bshore/gha/actions/gha-github@gha-github-v1.0.0
+        uses: bshore/gha/actions/github@github-v1.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: changed-dirs
@@ -105,11 +105,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: bshore/gha/actions/gha-github@gha-github-v1.0.0
+      - uses: bshore/gha/actions/github@github-v1.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: release
-          action_dir: actions/gha-github
+          action_dir: actions/github
           # release defaults to "false" → dry-run only
 ```
 
@@ -128,10 +128,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: bshore/gha/actions/gha-github@gha-github-v1.0.0
+      - uses: bshore/gha/actions/github@github-v1.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: release
-          action_dir: actions/gha-github
+          action_dir: actions/github
           release: "true"
 ```

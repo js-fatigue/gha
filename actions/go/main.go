@@ -5,17 +5,17 @@ import (
 	"os"
 	"strings"
 
-	"github.com/bshore/gha/actions/gha-github/cmd"
+	"github.com/bshore/gha/actions/go/cmd"
 	ac "github.com/bshore/gha/internal/actions-core"
 )
 
-const prCommentMarker = "<!-- gha-github-error -->"
+const prCommentMarker = "<!-- go-error -->"
 
 func main() {
 	defer ac.Exit()
 
 	if len(os.Args) < 2 {
-		ac.SetFailed("usage: gha-github <command>")
+		ac.SetFailed("usage: go <command>")
 		return
 	}
 	command := os.Args[1]
@@ -37,7 +37,7 @@ func main() {
 func buildErrorCommentBody(command string, cmdErr error) string {
 	var sb strings.Builder
 	sb.WriteString(prCommentMarker + "\n")
-	fmt.Fprintf(&sb, "## GitHub Actions `%s` Failed\n\n", command)
+	fmt.Fprintf(&sb, "## Go Actions `%s` Failed\n\n", command)
 	fmt.Fprintf(&sb, "**Error:** %s\n", cmdErr.Error())
 	return sb.String()
 }

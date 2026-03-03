@@ -55,10 +55,10 @@ runs:
     - uses: actions/cache@v4
       if: inputs.cache == 'true'
       with:
-        path: ${{ runner.temp }}/actions/gha-go
-        key: gha-go-${{ runner.os }}-${{ runner.arch }}-${{ steps.version.outputs.tag }}
+        path: ${{ runner.temp }}/actions/go
+        key: go-${{ runner.os }}-${{ runner.arch }}-${{ steps.version.outputs.tag }}
         restore-keys: |
-          gha-go-${{ runner.os }}-${{ runner.arch }}-
+          go-${{ runner.os }}-${{ runner.arch }}-
 
     - id: run
       shell: bash

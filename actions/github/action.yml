@@ -21,7 +21,7 @@ inputs:
     default: "0"
   action_dir:
     description: >
-      Path to the action family directory (e.g. actions/gha-github).
+      Path to the action family directory (e.g. actions/github).
       Used by the release command.
     required: false
     default: ""
@@ -40,7 +40,7 @@ inputs:
 
 outputs:
   dir_names:
-    description: JSON array of unique directories with changed files (e.g. ["actions/gha-github"])
+    description: JSON array of unique directories with changed files (e.g. ["actions/github"])
     value: ${{ steps.run.outputs.dir_names }}
   next_tag:
     description: Tag created and released (only set when command=release and release=true)
@@ -64,10 +64,10 @@ runs:
     - uses: actions/cache@v4
       if: inputs.cache == 'true'
       with:
-        path: ${{ runner.temp }}/actions/gha-github
-        key: gha-github-${{ runner.os }}-${{ runner.arch }}-${{ steps.version.outputs.tag }}
+        path: ${{ runner.temp }}/actions/github
+        key: github-${{ runner.os }}-${{ runner.arch }}-${{ steps.version.outputs.tag }}
         restore-keys: |
-          gha-github-${{ runner.os }}-${{ runner.arch }}-
+          github-${{ runner.os }}-${{ runner.arch }}-
 
     - id: run
       shell: bash

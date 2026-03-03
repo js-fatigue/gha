@@ -25,7 +25,7 @@ func runRelease() error {
 	if actionDir == "" {
 		return fmt.Errorf("action_dir input is required for release")
 	}
-	familyName := path.Base(actionDir) // e.g. "actions/gha-github" → "gha-github"
+	familyName := path.Base(actionDir) // e.g. "actions/github" → "github"
 
 	raw, _ := ac.GetInput("release", nil)
 	doRelease := raw == "true"
