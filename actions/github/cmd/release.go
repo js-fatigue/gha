@@ -16,19 +16,26 @@ import (
 
 func init() { Register("release", runRelease) }
 
+type ReleaseInput struct {
+	ActionDir string `json:"action_dir"`
+	Release   bool   `json:"release"`
+}
+
 var conventionalCommitRE = regexp.MustCompile(
 	`^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\([^)]+\))?(!)?: `,
 )
 
 func runRelease() error {
-	actionDir, _ := ac.GetInput("action_dir", nil)
-	if actionDir == "" {
-		return fmt.Errorf("action_dir input is required for release")
+	var inp ReleaseInput
+	if err := ac.GetJSONInput("release_input", &inp); err != nil {
+		return fmt.Errorf("parsing release_input: %w", err)
 	}
+	if inp.ActionDir == "" {
+		return fmt.Errorf("release_input.action_dir is required")
+	}
+	actionDir := inp.ActionDir
+	doRelease := inp.Release
 	familyName := path.Base(actionDir) // e.g. "actions/github" → "github"
-
-	raw, _ := ac.GetInput("release", nil)
-	doRelease := raw == "true"
 
 	ctx, err := ac.NewContext()
 	if err != nil {

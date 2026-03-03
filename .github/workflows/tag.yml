@@ -34,8 +34,7 @@ jobs:
           cache: "false"
           token: ${{ secrets.GITHUB_TOKEN }}
           command: changed-dirs
-          base: ${{ github.event.before }}
-          max_depth: "2"
+          changed_dirs_input: '{"base": "${{ github.event.before }}", "max_depth": 2}'
 
   release:
     needs: changed-dirs
@@ -64,8 +63,7 @@ jobs:
           cache: "false"
           token: ${{ secrets.GITHUB_TOKEN }}
           command: release
-          action_dir: ${{ matrix.dir }}
-          release: "true"
+          release_input: '{"action_dir": "${{ matrix.dir }}", "release": true}'
 
       - name: Build and upload release assets
         if: startsWith(matrix.dir, 'actions/')
