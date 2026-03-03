@@ -14,6 +14,7 @@ go build ./...
 
 # Build a specific action binary
 go build -o actions/gha-github/gha-github ./actions/gha-github
+go build -o actions/gha-go/gha-go ./actions/gha-go
 
 # Run all tests
 go test ./...
@@ -68,6 +69,12 @@ func init() { Register("command-name", runCommand) }
 | `changed-dirs` | Lists directories changed between base and HEAD via `git diff` |
 | `release` | Semantic versioning — bumps version and creates GitHub Releases |
 
+#### Current family: `gha-go`
+
+| Command | Description |
+|---------|-------------|
+| `build` | Wraps `go build`; inputs: `working_directory`, `output`, `ldflags`, `cgo_enabled`; output: `binary_path` |
+
 The `main.go` pattern:
 1. `defer ac.Exit()` at top of `main()`
 2. Read command from `os.Args[1]`
@@ -91,7 +98,7 @@ env:
 **Command dispatch via `os.Args[1]`**
 The `command` input is passed as a CLI argument, not an env var:
 ```yaml
-run: ${{ github.action_path }}/gha-github "${{ inputs.command }}"
+run: ${{ github.action_path }}/gha-<family> "${{ inputs.command }}"
 ```
 
 **Boolean input helper**
@@ -110,10 +117,10 @@ Use HTML marker comments for idempotent updates. Call `ac.UpsertPRComment(ctx, m
 **Binary caching (`cache` input)**
 `action.yml` has a `cache` input (default `"true"`). When true, two steps run before bootstrap:
 1. `version` — resolves the tag via `gh release view` (falls back to `"latest"`), writes to `steps.version.outputs.tag`
-2. `actions/cache@v4` — path `$RUNNER_TEMP/actions/gha-github`, key `gha-github-<OS>-<arch>-<tag>`, restore-key prefix `gha-github-<OS>-<arch>-`
+2. `actions/cache@v4` — path `$RUNNER_TEMP/actions/gha-<family>`, key `gha-<family>-<OS>-<arch>-<tag>`, restore-key prefix `gha-<family>-<OS>-<arch>-`
 
-`GHA_GITHUB_VERSION` is forwarded to `bootstrap.sh` so it targets the resolved tag directory.
-**Source-build callers must pass `cache: "false"`** to skip these steps (the binary is already in `$RUNNER_TEMP/actions/gha-github/latest/`).
+`GHA_<FAMILY>_VERSION` is forwarded to `bootstrap.sh` so it targets the resolved tag directory.
+**Source-build callers must pass `cache: "false"`** to skip these steps (the binary is already in `$RUNNER_TEMP/actions/gha-<family>/latest/`).
 
 **Exit handling**
 - All `actions-core` functions that write to files return `error`; propagate with `ac.SetFailed`.
@@ -124,17 +131,25 @@ Use HTML marker comments for idempotent updates. Call `ac.UpsertPRComment(ctx, m
 
 ## CI
 
-Three workflow files in `.github/workflows/`:
+Two workflow files in `.github/workflows/`:
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
-| `push.yml` | Push to non-main branches | Builds `gha-github` binary and runs `changed-dirs` |
-| `workflow-check-pull-request.yml` | PR opened/edited/synchronized/reopened | Validates PR title; detects changed dirs; runs `release` in dry-run mode to preview version bump |
-| `workflow-release.yml` | Push to `main` | Detects changed action dirs; runs `release` with `release=true` to create GitHub Releases |
+| `pull-request.yml` | PR opened/edited/synchronized/reopened | Validates PR title; detects changed dirs; runs `release` in dry-run mode to preview version bump |
+| `tag.yml` | Push to `main` | Detects changed action dirs; runs `release` with `release=true`; cross-compiles linux-amd64/arm64 binaries and uploads to the release |
 
-All three internal workflows pass `cache: "false"` to the `gha-github` action because they build the binary from source before invoking it.
+All CI workflows pass `cache: "false"` to any `gha-*` action step because the binary is built from source earlier in the same job.
 
 The `release` command tags format: `<family>-v<MAJOR>.<MINOR>.<PATCH>` (e.g., `gha-github-v1.0.0`). Bump type is inferred from the commit/PR title using conventional commit conventions (`!` = major, `feat` = minor, everything else = patch).
+
+## Claude Skills
+
+Project-level skills live in `.claude/skills/` and are invoked via the Skill tool:
+
+| Skill | Trigger |
+|-------|---------|
+| `gha-new-family` | Scaffold a new `gha-<family>` action family |
+| `gha-new-command` | Add a new command to an existing `gha-<family>` action |
 
 ## Module
 
