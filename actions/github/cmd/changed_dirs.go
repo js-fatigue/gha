@@ -6,26 +6,25 @@ import (
 	"os/exec"
 	"path"
 	"sort"
-	"strconv"
 	"strings"
 
 	ac "github.com/bshore/gha/internal/actions-core"
 )
 
+type ChangedDirsInput struct {
+	Base     string `json:"base"`
+	MaxDepth int    `json:"max_depth"`
+}
+
 func init() { Register("changed-dirs", runChangedDirs) }
 
 func runChangedDirs() error {
-	base, _ := ac.GetInput("base", nil)
-	if base == "" {
-		base = "main"
+	inp := ChangedDirsInput{Base: "main"}
+	if err := ac.GetJSONInput("changed_dirs_input", &inp); err != nil {
+		return fmt.Errorf("parsing changed_dirs_input: %w", err)
 	}
-
-	maxDepth := 0
-	if raw, _ := ac.GetInput("max_depth", nil); raw != "" {
-		if n, err := strconv.Atoi(raw); err == nil && n > 0 {
-			maxDepth = n
-		}
-	}
+	base := inp.Base
+	maxDepth := inp.MaxDepth
 
 	// Resolve base ref: prefer local (e.g. when the branch is checked out),
 	// fall back to origin/<base> (the common case on CI runners where only the

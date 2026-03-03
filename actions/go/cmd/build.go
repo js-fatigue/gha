@@ -11,17 +11,25 @@ import (
 
 func init() { Register("build", runBuild) }
 
+type BuildInput struct {
+	WorkingDirectory string `json:"working_directory"`
+	Output           string `json:"output"`
+	LDFlags          string `json:"ldflags"`
+	CGOEnabled       string `json:"cgo_enabled"`
+}
+
 func runBuild() error {
-	workingDir, _ := ac.GetInput("working_directory", nil)
-	if workingDir == "" {
-		workingDir = "."
+	inp := BuildInput{
+		WorkingDirectory: ".",
+		CGOEnabled:       "0",
 	}
-	output, _ := ac.GetInput("output", nil)
-	ldflags, _ := ac.GetInput("ldflags", nil)
-	cgoEnabled, _ := ac.GetInput("cgo_enabled", nil)
-	if cgoEnabled == "" {
-		cgoEnabled = "0"
+	if err := ac.GetJSONInput("build_input", &inp); err != nil {
+		return fmt.Errorf("parsing build_input: %w", err)
 	}
+	workingDir := inp.WorkingDirectory
+	output := inp.Output
+	ldflags := inp.LDFlags
+	cgoEnabled := inp.CGOEnabled
 
 	args := []string{"build"}
 	if output != "" {

@@ -55,8 +55,7 @@ jobs:
           cache: "false"
           token: ${{ secrets.GITHUB_TOKEN }}
           command: changed-dirs
-          base: main
-          max_depth: "2"
+          changed_dirs_input: '{"base": "main", "max_depth": 2}'
 
   check-actions:
     needs: changed-dirs
@@ -84,5 +83,4 @@ jobs:
           cache: "false"
           token: ${{ secrets.GITHUB_TOKEN }}
           command: release
-          action_dir: ${{ matrix.dir }}
-          # release defaults to "false" → dry-run
+          release_input: '{"action_dir": "${{ matrix.dir }}"}'

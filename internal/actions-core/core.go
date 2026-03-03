@@ -3,6 +3,7 @@ package ac
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -205,6 +206,33 @@ func GetMultilineInput(name string, opts *InputOptions) ([]string, error) {
 		}
 	}
 	return result, nil
+}
+
+// GetBooleanInputOrDefault reads a boolean action input, returning defaultVal
+// when the input is empty. This avoids the error GetBooleanInput returns on an
+// empty string, which is the common case for optional boolean inputs.
+func GetBooleanInputOrDefault(name string, defaultVal bool, opts *InputOptions) (bool, error) {
+	val, err := GetInput(name, opts)
+	if err != nil {
+		return false, err
+	}
+	if val == "" {
+		return defaultVal, nil
+	}
+	return GetBooleanInput(name, opts)
+}
+
+// GetJSONInput reads the named input as a JSON string and unmarshals it into out.
+// If the input is empty, out is left unchanged (caller should pre-initialize with defaults).
+func GetJSONInput(name string, out any) error {
+	raw, err := GetInput(name, nil)
+	if err != nil {
+		return err
+	}
+	if raw == "" {
+		return nil
+	}
+	return json.Unmarshal([]byte(raw), out)
 }
 
 // GetBooleanInput reads a boolean action input using YAML 1.2 rules.

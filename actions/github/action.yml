@@ -9,28 +9,18 @@ inputs:
   command:
     description: Command to run (e.g. changed-dirs)
     required: true
-  base:
-    description: Base ref or SHA to compare against
-    required: false
-    default: "main"
-  max_depth:
-    description: >
-      Maximum directory depth to return (0 = unlimited).
-      E.g. depth 2 maps "a/b/c" → "a/b".
-    required: false
-    default: "0"
-  action_dir:
-    description: >
-      Path to the action family directory (e.g. actions/github).
-      Used by the release command.
+  changed_dirs_input:
+    description: JSON options for the changed-dirs command
     required: false
     default: ""
-  release:
-    description: >
-      When true, create the GitHub release. When false (default), dry-run only.
-      Used by the release command.
+  release_input:
+    description: JSON options for the release command
     required: false
-    default: "false"
+    default: ""
+  checkout_input:
+    description: JSON options for the checkout command
+    required: false
+    default: ""
   cache:
     description: >
       When true (default), cache the downloaded binary using actions/cache.
@@ -45,6 +35,12 @@ outputs:
   next_tag:
     description: Tag created and released (only set when command=release and release=true)
     value: ${{ steps.run.outputs.next_tag }}
+  ref:
+    description: The branch or tag ref that was checked out
+    value: ${{ steps.run.outputs.ref }}
+  commit:
+    description: The commit SHA that was checked out
+    value: ${{ steps.run.outputs.commit }}
 
 runs:
   using: composite
@@ -73,10 +69,9 @@ runs:
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
-        INPUT_BASE: ${{ inputs.base }}
-        INPUT_MAX_DEPTH: ${{ inputs.max_depth }}
-        INPUT_ACTION_DIR: ${{ inputs.action_dir }}
-        INPUT_RELEASE: ${{ inputs.release }}
+        INPUT_CHANGED_DIRS_INPUT: ${{ inputs.changed_dirs_input }}
+        INPUT_RELEASE_INPUT: ${{ inputs.release_input }}
+        INPUT_CHECKOUT_INPUT: ${{ inputs.checkout_input }}
         GHA_GITHUB_VERSION: ${{ steps.version.outputs.tag }}
       run: |
         chmod +x ${{ github.action_path }}/scripts/bootstrap.sh
