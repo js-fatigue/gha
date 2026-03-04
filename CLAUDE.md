@@ -122,6 +122,9 @@ Use HTML marker comments for idempotent updates. Call `ac.UpsertPRComment(ctx, m
 `GHA_<FAMILY>_VERSION` is forwarded to `bootstrap.sh` so it targets the resolved tag directory.
 **Source-build callers must pass `cache: "false"`** to skip these steps (the binary is already in `$RUNNER_TEMP/actions/<family>/latest/`).
 
+**Line endings — LF only**
+All shell scripts (`*.sh`) and text files must use LF line endings. CRLF causes `cannot execute: required file not found` on Linux runners because the kernel appends `\r` to the shebang interpreter path. A `.gitattributes` file at the repo root enforces this via `* text=auto eol=lf`. Never commit files with CRLF line endings; verify with `file scripts/bootstrap.sh` (must not say "CRLF").
+
 **Exit handling**
 - All `actions-core` functions that write to files return `error`; propagate with `ac.SetFailed`.
 - `ac.Exit()` calls `os.Exit` with the current exit code — always `defer ac.Exit()` in `main()`.

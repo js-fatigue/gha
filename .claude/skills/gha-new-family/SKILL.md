@@ -279,3 +279,4 @@ exec "$BINARY_PATH" "$@"
 - [ ] Input names use underscores only
 - [ ] PR comment marker is `<!-- <family>-error -->`
 - [ ] `cache: "false"` set in CI workflows that build from source
+- [ ] `scripts/bootstrap.sh` uses LF line endings — verify with `file scripts/bootstrap.sh` (must not say "CRLF"); `.gitattributes` enforces this on commit

@@ -1,0 +1,9 @@
+# Enforce LF line endings on all text files (prevents CRLF breaking shell scripts on Linux runners)
+* text=auto eol=lf
+
+# Explicitly mark binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
