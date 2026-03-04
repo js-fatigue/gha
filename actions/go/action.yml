@@ -13,6 +13,21 @@ inputs:
     description: JSON options for the build command
     required: false
     default: ""
+  setup_input:
+    description: JSON options for the setup command
+    required: false
+    default: ""
+  cache_dependency_path:
+    description: >
+      Glob path to go.sum file(s) used for the Go module cache key.
+      Only used when command=setup. Defaults to all go.sum files.
+    required: false
+    default: "**/go.sum"
+  cache_go_modules:
+    description: >
+      Cache the Go module cache when command=setup. Default true.
+    required: false
+    default: "true"
   cache:
     description: >
       When true (default), cache the downloaded binary using actions/cache.
@@ -24,6 +39,9 @@ outputs:
   binary_path:
     description: Path to the compiled binary (only set when output is non-empty)
     value: ${{ steps.run.outputs.binary_path }}
+  go_version:
+    description: The resolved Go version that was installed (only set when command=setup)
+    value: ${{ steps.run.outputs.go_version }}
 
 runs:
   using: composite
@@ -43,11 +61,20 @@ runs:
         restore-keys: |
           go-${{ runner.os }}-${{ runner.arch }}-
 
+    - uses: actions/cache@v4
+      if: inputs.command == 'setup' && inputs.cache_go_modules == 'true'
+      with:
+        path: ~/go/pkg/mod
+        key: go-modules-${{ runner.os }}-${{ hashFiles(inputs.cache_dependency_path) }}
+        restore-keys: |
+          go-modules-${{ runner.os }}-
+
     - id: run
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
         INPUT_BUILD_INPUT: ${{ inputs.build_input }}
+        INPUT_SETUP_INPUT: ${{ inputs.setup_input }}
         GHA_GO_VERSION: ${{ steps.version.outputs.tag }}
       run: |
         chmod +x ${{ github.action_path }}/scripts/bootstrap.sh
