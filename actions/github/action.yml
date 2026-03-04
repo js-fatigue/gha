@@ -21,6 +21,10 @@ inputs:
     description: JSON options for the checkout command
     required: false
     default: ""
+  cache_input:
+    description: JSON options for the cache command
+    required: false
+    default: ""
   cache:
     description: >
       When true (default), cache the downloaded binary using actions/cache.
@@ -41,6 +45,9 @@ outputs:
   commit:
     description: The commit SHA that was checked out
     value: ${{ steps.run.outputs.commit }}
+  cache_hit:
+    description: "'true' if the cache key was an exact match, 'false' on miss (only set when command=cache and action=restore)"
+    value: ${{ steps.run.outputs.cache_hit }}
 
 runs:
   using: composite
@@ -67,6 +74,7 @@ runs:
         INPUT_CHANGED_DIRS_INPUT: ${{ inputs.changed_dirs_input }}
         INPUT_RELEASE_INPUT: ${{ inputs.release_input }}
         INPUT_CHECKOUT_INPUT: ${{ inputs.checkout_input }}
+        INPUT_CACHE_INPUT: ${{ inputs.cache_input }}
         GHA_GITHUB_VERSION: ${{ steps.version.outputs.tag }}
       run: |
         chmod +x ${{ github.action_path }}/scripts/bootstrap.sh
