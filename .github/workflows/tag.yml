@@ -20,7 +20,7 @@ jobs:
           command: checkout
           checkout_input: '{"ref": "${{ github.ref_name }}", "fetch_depth": 0}'
 
-      - uses: bshore/gha/actions/go@go-v0.3.1
+      - uses: bshore/gha/actions/go@go-v0.3.2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: setup
@@ -54,7 +54,7 @@ jobs:
           command: checkout
           checkout_input: '{"ref": "${{ github.ref_name }}"}'
 
-      - uses: bshore/gha/actions/go@go-v0.3.1
+      - uses: bshore/gha/actions/go@go-v0.3.2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: setup
