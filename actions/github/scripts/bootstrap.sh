@@ -1,7 +1,6 @@
 #!/bin/bash
 # bootstrap.sh — downloads the github binary from GitHub Releases,
 # caches it in $RUNNER_TEMP, and exec's it with all arguments forwarded.
-# Not used in the POC (action.yml builds from source); intended for production.
 
 set -euo pipefail
 
