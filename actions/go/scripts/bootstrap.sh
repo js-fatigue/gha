@@ -34,23 +34,18 @@ mkdir -p "$(dirname "$BINARY_PATH")"
 
 ASSET_NAME="${BINARY_NAME}-${OS}-${ARCH}"
 
+CHECKSUMS_PATH="$(dirname "$BINARY_PATH")/checksums.txt"
+
+echo "go: downloading ${ASSET_NAME} (release: ${RELEASE_TAG})"
 if [[ "$RELEASE_TAG" == "latest" ]]; then
-  DOWNLOAD_URL="https://github.com/${REPO}/releases/latest/download/${ASSET_NAME}"
+  gh release download --repo "$REPO" --pattern "$ASSET_NAME" --output "$BINARY_PATH" --clobber
+  gh release download --repo "$REPO" --pattern "checksums.txt" --output "$CHECKSUMS_PATH" --clobber
 else
-  DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${RELEASE_TAG}/${ASSET_NAME}"
+  gh release download "$RELEASE_TAG" --repo "$REPO" --pattern "$ASSET_NAME" --output "$BINARY_PATH" --clobber
+  gh release download "$RELEASE_TAG" --repo "$REPO" --pattern "checksums.txt" --output "$CHECKSUMS_PATH" --clobber
 fi
 
-echo "go: downloading from ${DOWNLOAD_URL}"
-curl -fsSL -o "$BINARY_PATH" "$DOWNLOAD_URL"
-
-# Verify checksum
-if [[ "$RELEASE_TAG" == "latest" ]]; then
-  CHECKSUM_URL="https://github.com/${REPO}/releases/latest/download/checksums.txt"
-else
-  CHECKSUM_URL="https://github.com/${REPO}/releases/download/${RELEASE_TAG}/checksums.txt"
-fi
-
-EXPECTED=$(curl -fsSL "$CHECKSUM_URL" | awk "/^[0-9a-f]+ +${ASSET_NAME}\$/ {print \$1}")
+EXPECTED=$(awk "/^[0-9a-f]+ +${ASSET_NAME}\$/ {print \$1}" "$CHECKSUMS_PATH")
 if [[ -z "$EXPECTED" ]]; then
   echo "go: ${ASSET_NAME} not found in checksums.txt" >&2
   rm -f "$BINARY_PATH"
