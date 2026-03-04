@@ -20,9 +20,11 @@ jobs:
           command: checkout
           checkout_input: '{"ref": "${{ github.ref_name }}", "fetch_depth": 0}'
 
-      - uses: actions/setup-go@v5
+      - uses: bshore/gha/actions/go@go-v0.3.0
         with:
-          go-version: "1.23"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: setup
+          setup_input: '{"go_version_file": "go.mod"}'
 
       - name: Build github
         run: |
@@ -52,9 +54,11 @@ jobs:
           command: checkout
           checkout_input: '{"ref": "${{ github.ref_name }}"}'
 
-      - uses: actions/setup-go@v5
+      - uses: bshore/gha/actions/go@go-v0.3.0
         with:
-          go-version: "1.23"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: setup
+          setup_input: '{"go_version_file": "go.mod"}'
 
       - name: Build github
         run: |
