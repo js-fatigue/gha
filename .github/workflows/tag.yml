@@ -24,7 +24,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: setup
-          setup_input: '{"go_version_file": "go.mod"}'
+          setup_input: '{"go_version": "1.23"}'
 
       - name: Build github
         run: |
@@ -58,7 +58,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: setup
-          setup_input: '{"go_version_file": "go.mod"}'
+          setup_input: '{"go_version": "1.23"}'
 
       - name: Build github
         run: |
