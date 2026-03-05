@@ -49,5 +49,5 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: build
-          build_input: '{"working_directory": "../github", "output": "github-test-build"}'
+          build_input: '{"working_directory": ".", "output": "go-test-build"}'
           cache: "false"
