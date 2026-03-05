@@ -61,6 +61,7 @@ runs:
         INPUT_RELEASE_INPUT: ${{ inputs.release_input }}
         INPUT_CHECKOUT_INPUT: ${{ inputs.checkout_input }}
         GHA_GITHUB_VERSION: ${{ steps.version.outputs.tag }}
+        INPUT_CACHE: ${{ inputs.cache }}
       run: |
         chmod +x ${{ github.action_path }}/scripts/bootstrap.sh
         ${{ github.action_path }}/scripts/bootstrap.sh "${{ inputs.command }}"

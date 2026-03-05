@@ -82,10 +82,4 @@ echo "go: checksum OK"
 
 chmod +x "$BINARY_PATH"
 
-# Self-cache the binary for next run
-if [[ -n "${ACTIONS_CACHE_URL:-}" && -n "${ACTIONS_RUNTIME_TOKEN:-}" ]]; then
-  INPUT_CACHE_INPUT="{\"action\":\"save\",\"path\":[\"$(dirname "$BINARY_PATH")\"],\"key\":\"${CACHE_KEY}\"}" \
-    "$BINARY_PATH" cache 2>/dev/null || true
-fi
-
 exec "$BINARY_PATH" "$@"
