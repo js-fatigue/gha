@@ -12,13 +12,13 @@ jobs:
   check-pr-title:
     runs-on: ubuntu-latest
     steps:
-      - uses: bshore/gha/actions/github@github-v0.2.3
+      - uses: bshore/gha/actions/github@github-v0.4.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
           checkout_input: '{"ref": "${{ github.head_ref }}"}'
 
-      - uses: bshore/gha/actions/go@go-v0.3.2
+      - uses: bshore/gha/actions/go@go-v0.4.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: setup
@@ -41,13 +41,13 @@ jobs:
     outputs:
       dir_names: ${{ steps.changed-dirs.outputs.dir_names }}
     steps:
-      - uses: bshore/gha/actions/github@github-v0.2.3
+      - uses: bshore/gha/actions/github@github-v0.4.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
           checkout_input: '{"ref": "${{ github.head_ref }}", "fetch_depth": 0}'
 
-      - uses: bshore/gha/actions/go@go-v0.3.2
+      - uses: bshore/gha/actions/go@go-v0.4.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: setup
@@ -75,13 +75,13 @@ jobs:
         dir: ${{ fromJson(needs.changed-dirs.outputs.dir_names) }}
     runs-on: ubuntu-latest
     steps:
-      - uses: bshore/gha/actions/github@github-v0.2.3
+      - uses: bshore/gha/actions/github@github-v0.4.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
           checkout_input: '{"ref": "${{ github.head_ref }}"}'
 
-      - uses: bshore/gha/actions/go@go-v0.3.2
+      - uses: bshore/gha/actions/go@go-v0.4.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: setup
