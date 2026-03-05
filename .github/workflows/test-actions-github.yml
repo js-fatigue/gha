@@ -40,5 +40,5 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: release
-          release_input: '{"action_dir": "actions/github"}'
+          release_input: '{"action_dir": "../actions/github"}'
           cache: "false"
