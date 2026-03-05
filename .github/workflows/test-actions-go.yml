@@ -1,0 +1,53 @@
+name: Test go action
+
+on:
+  push:
+    branches-ignore:
+      - main
+    paths:
+      - .github/workflows/test-actions-go.yml
+      - actions/go/**
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: bshore/gha/actions/github@github-v0.4.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: checkout
+          checkout_input: '{"ref": "${{ github.ref_name }}", "fetch_depth": 0}'
+
+      - name: changed-dirs (versioned)
+        id: changed-dirs
+        uses: bshore/gha/actions/github@github-v0.4.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: changed-dirs
+          changed_dirs_input: '{"base": "main", "max_depth": 2}'
+
+      - name: Build go binary
+        run: |
+          mkdir -p "${RUNNER_TEMP}/actions/go/latest"
+          go build -o "${RUNNER_TEMP}/actions/go/latest/go" ./actions/go
+
+      - name: setup (source build)
+        uses: ./actions/go
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: setup
+          setup_input: '{"go_version_file": "go.mod"}'
+          cache: "false"
+
+      - name: build (source build)
+        id: build
+        uses: ./actions/go
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: build
+          build_input: '{"working_directory": "actions/github", "output": "github-test"}'
+          cache: "false"

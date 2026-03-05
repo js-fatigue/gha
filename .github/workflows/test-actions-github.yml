@@ -1,0 +1,52 @@
+name: Test github action
+
+on:
+  push:
+    branches-ignore:
+      - main
+    paths:
+      - .github/workflows/test-actions-github.yml
+      - actions/github/**
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: bshore/gha/actions/github@github-v0.4.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: checkout
+          checkout_input: '{"ref": "${{ github.ref_name }}", "fetch_depth": 0}'
+
+      - name: Build github binary
+        run: |
+          mkdir -p "${RUNNER_TEMP}/actions/github/latest"
+          go build -o "${RUNNER_TEMP}/actions/github/latest/github" ./actions/github
+
+      - name: changed-dirs (versioned)
+        id: changed-dirs
+        uses: bshore/gha/actions/github@github-v0.4.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: changed-dirs
+          changed_dirs_input: '{"base": "main", "max_depth": 2}'
+
+      - name: changed-dirs (source build)
+        uses: ./actions/github
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: changed-dirs
+          changed_dirs_input: '{"base": "main", "max_depth": 2}'
+          cache: "false"
+
+      - name: release dry run (source build)
+        uses: ./actions/github
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: release
+          release_input: '{"action_dir": "actions/github"}'
+          cache: "false"
