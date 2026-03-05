@@ -20,22 +20,10 @@ jobs:
           command: checkout
           checkout_input: '{"ref": "${{ github.ref_name }}", "fetch_depth": 0}'
 
-      - uses: bshore/gha/actions/go@go-v0.4.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          command: setup
-          setup_input: '{"go_version": "1.23"}'
-
-      - name: Build github
-        run: |
-          mkdir -p "${RUNNER_TEMP}/actions/github/latest"
-          go build -o "${RUNNER_TEMP}/actions/github/latest/github" ./actions/github
-
       - name: Detect changed directories
         id: changed-dirs
-        uses: ./actions/github
+        uses: bshore/gha/actions/github@github-v0.4.0
         with:
-          cache: "false"
           token: ${{ secrets.GITHUB_TOKEN }}
           command: changed-dirs
           changed_dirs_input: '{"base": "${{ github.event.before }}", "max_depth": 2}'
@@ -54,23 +42,11 @@ jobs:
           command: checkout
           checkout_input: '{"ref": "${{ github.ref_name }}"}'
 
-      - uses: bshore/gha/actions/go@go-v0.4.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          command: setup
-          setup_input: '{"go_version": "1.23"}'
-
-      - name: Build github
-        run: |
-          mkdir -p "${RUNNER_TEMP}/actions/github/latest"
-          go build -o "${RUNNER_TEMP}/actions/github/latest/github" ./actions/github
-
       - name: Release
         id: release
         if: startsWith(matrix.dir, 'actions/')
-        uses: ./actions/github
+        uses: bshore/gha/actions/github@github-v0.4.0
         with:
-          cache: "false"
           token: ${{ secrets.GITHUB_TOKEN }}
           command: release
           release_input: '{"action_dir": "${{ matrix.dir }}", "release": true}'
