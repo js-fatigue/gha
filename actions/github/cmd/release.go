@@ -103,9 +103,10 @@ func runRelease() error {
 			repoInfo.Owner,
 			repoInfo.Repo,
 			&github.RepositoryRelease{
-				TagName: github.Ptr(nextTag),
-				Name:    github.Ptr(nextTag),
-				Body:    github.Ptr(releaseBody),
+				TagName:    github.Ptr(nextTag),
+				Name:       github.Ptr(nextTag),
+				Body:       github.Ptr(releaseBody),
+				MakeLatest: github.Ptr("false"),
 			},
 		)
 		if err != nil {

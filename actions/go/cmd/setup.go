@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 
 	ac "github.com/bshore/gha/internal/actions-core"
@@ -46,6 +47,13 @@ func runSetup() error {
 		return fmt.Errorf("parsing setup_input: %w", err)
 	}
 
+	cacheModulesRaw, _ := ac.GetInput("cache_go_modules", nil)
+	cacheModules := cacheModulesRaw != "false"
+	cacheDependencyPath, _ := ac.GetInput("cache_dependency_path", nil)
+	if cacheDependencyPath == "" {
+		cacheDependencyPath = "**/go.sum"
+	}
+
 	// Resolve version from file if provided.
 	if inp.GoVersionFile != "" {
 		v, err := readVersionFile(inp.GoVersionFile)
@@ -57,6 +65,24 @@ func runSetup() error {
 	}
 	if inp.GoVersion == "" {
 		inp.GoVersion = "stable"
+	}
+
+	// Restore module cache before installation.
+	if cacheModules {
+		key, err := modulesCacheKey(cacheDependencyPath)
+		if err != nil {
+			ac.Warning(fmt.Sprintf("module cache key: %v", err), nil)
+		} else {
+			cacheInp := ac.CacheInput{
+				Action:      "restore",
+				Path:        []string{"~/go/pkg/mod"},
+				Key:         key,
+				RestoreKeys: []string{fmt.Sprintf("go-modules-%s-", os.Getenv("RUNNER_OS"))},
+			}
+			if err := ac.RestoreCache(cacheInp); err != nil {
+				ac.Warning(fmt.Sprintf("module cache restore: %v", err), nil)
+			}
+		}
 	}
 
 	releases, err := fetchReleases()
@@ -137,7 +163,49 @@ func runSetup() error {
 		ac.Warning(fmt.Sprintf("could not write job summary: %v", err), nil)
 	}
 
+	// Save module cache after installation.
+	if cacheModules {
+		key, err := modulesCacheKey(cacheDependencyPath)
+		if err != nil {
+			ac.Warning(fmt.Sprintf("module cache key: %v", err), nil)
+		} else {
+			cacheInp := ac.CacheInput{
+				Action: "save",
+				Path:   []string{"~/go/pkg/mod"},
+				Key:    key,
+			}
+			if err := ac.SaveCache(cacheInp); err != nil {
+				ac.Warning(fmt.Sprintf("module cache save: %v", err), nil)
+			}
+		}
+	}
+
 	return nil
+}
+
+// modulesCacheKey computes a cache key based on all go.sum files matching pattern.
+func modulesCacheKey(pattern string) (string, error) {
+	runnerOS := os.Getenv("RUNNER_OS")
+	if runnerOS == "" {
+		runnerOS = "Linux"
+	}
+
+	matches, err := filepath.Glob(pattern)
+	if err != nil {
+		return "", fmt.Errorf("glob %q: %w", pattern, err)
+	}
+	sort.Strings(matches)
+
+	h := sha256.New()
+	for _, path := range matches {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return "", fmt.Errorf("reading %s: %w", path, err)
+		}
+		h.Write(data)
+	}
+	hash := hex.EncodeToString(h.Sum(nil))
+	return fmt.Sprintf("go-modules-%s-%s", runnerOS, hash), nil
 }
 
 // readVersionFile parses a go.mod or .go-version file and returns the Go version string.
