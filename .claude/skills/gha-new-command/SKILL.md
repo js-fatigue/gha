@@ -181,7 +181,19 @@ outputs:
 
 ---
 
-## 7. Checklist
+## 7. Update `README.md`
+
+Edit `actions/<family>/README.md`:
+
+1. Add the command to the **Commands** table
+2. Add `<command>_input` to the **Inputs** table
+3. Add a **JSON input schema** sub-section for `<command>_input` with a field table
+4. Add any new outputs to the **Outputs** table
+5. Add a **Usage** example for the new command
+
+---
+
+## 8. Checklist
 
 - [ ] New file `cmd/<name>.go` with `init()` self-registration
 - [ ] Input names use underscores only
@@ -193,3 +205,7 @@ outputs:
 - [ ] New outputs added to `action.yml` outputs block if applicable
 - [ ] `go build ./actions/<family>/...` — compiles cleanly
 - [ ] `go vet ./actions/<family>/...` — no issues
+- [ ] Command added to `README.md` Commands table
+- [ ] `<command>_input` added to `README.md` Inputs table with JSON schema sub-section
+- [ ] New outputs documented in `README.md` Outputs table
+- [ ] Usage example added to `README.md`
