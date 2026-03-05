@@ -52,7 +52,9 @@ runs:
       run: |
         v=$(basename "$(dirname "$(dirname "${{ github.action_path }}")")")
         echo "tag=${v}" >> "$GITHUB_OUTPUT"
-
+    - id: env
+      shell: bash
+      run: env | sort
     - id: run
       shell: bash
       env:
@@ -62,6 +64,7 @@ runs:
         INPUT_CHECKOUT_INPUT: ${{ inputs.checkout_input }}
         GHA_GITHUB_VERSION: ${{ steps.version.outputs.tag }}
         INPUT_CACHE: ${{ inputs.cache }}
+        # TODO: need to yoink
         ACTIONS_CACHE_URL: ${{ env.ACTIONS_CACHE_URL }}
         ACTIONS_RUNTIME_TOKEN: ${{ env.ACTIONS_RUNTIME_TOKEN }}
         ACTIONS_RESULTS_URL: ${{ env.ACTIONS_RESULTS_URL }}

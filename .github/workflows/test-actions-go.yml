@@ -35,8 +35,17 @@ jobs:
           mkdir -p "${RUNNER_TEMP}/actions/go/latest"
           go build -o "${RUNNER_TEMP}/actions/go/latest/go" ./actions/go
 
+      - id: env
+        shell: bash
+        run: env | sort
+
       - name: setup (source build)
         uses: ./actions/go
+        env:
+          ACTIONS_CACHE_URL: ${{ env.ACTIONS_CACHE_URL }}
+          ACTIONS_RUNTIME_TOKEN: ${{ env.ACTIONS_RUNTIME_TOKEN }}
+          ACTIONS_RESULTS_URL: ${{ env.ACTIONS_RESULTS_URL }}
+          ACTIONS_RUNTIME_URL: ${{ env.ACTIONS_RUNTIME_URL }}
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: setup
@@ -46,6 +55,11 @@ jobs:
       - name: build (source build)
         id: build
         uses: ./actions/go
+        env:
+          ACTIONS_CACHE_URL: ${{ env.ACTIONS_CACHE_URL }}
+          ACTIONS_RUNTIME_TOKEN: ${{ env.ACTIONS_RUNTIME_TOKEN }}
+          ACTIONS_RESULTS_URL: ${{ env.ACTIONS_RESULTS_URL }}
+          ACTIONS_RUNTIME_URL: ${{ env.ACTIONS_RUNTIME_URL }}
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: build
