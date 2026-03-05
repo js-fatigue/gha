@@ -1,4 +1,4 @@
-name: Test go action
+name: Test Go Actions
 
 on:
   push:
@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  test-actions-go:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -49,5 +49,5 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: build
-          build_input: '{"working_directory": "actions/github", "output": "github-test"}'
+          build_input: '{"working_directory": "actions/go", "output": "github-test"}'
           cache: "false"

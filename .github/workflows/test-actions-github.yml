@@ -1,4 +1,4 @@
-name: Test github action
+name: Test Github Actions
 
 on:
   push:
@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  test-actions-github:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -26,14 +26,6 @@ jobs:
         run: |
           mkdir -p "${RUNNER_TEMP}/actions/github/latest"
           go build -o "${RUNNER_TEMP}/actions/github/latest/github" ./actions/github
-
-      - name: changed-dirs (versioned)
-        id: changed-dirs
-        uses: bshore/gha/actions/github@github-v0.4.1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          command: changed-dirs
-          changed_dirs_input: '{"base": "main", "max_depth": 2}'
 
       - name: changed-dirs (source build)
         uses: ./actions/github
