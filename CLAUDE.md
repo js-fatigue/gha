@@ -53,7 +53,7 @@ actions/<family>/
 │   ├── registry.go     # Register(name, fn) + Dispatch(name)
 │   └── <command>.go    # one file per command; self-registers via init()
 └── scripts/
-    └── bootstrap.sh    # downloads binary from Releases into $RUNNER_TEMP; action.yml wraps it with actions/cache
+    └── bootstrap.sh    # downloads binary from Releases into $RUNNER_TEMP; self-caches via Actions cache API
 ```
 
 Commands self-register using `init()`:
@@ -68,12 +68,15 @@ func init() { Register("command-name", runCommand) }
 | `check-pr-title` | Validates PR title against conventional commit format |
 | `changed-dirs` | Lists directories changed between base and HEAD via `git diff` |
 | `release` | Semantic versioning — bumps version and creates GitHub Releases |
+| `cache` | Restore or save cache entries via the GitHub Actions Cache API; inputs via `cache_input` JSON |
 
 #### Current family: `go`
 
 | Command | Description |
 |---------|-------------|
 | `build` | Wraps `go build`; inputs: `working_directory`, `output`, `ldflags`, `cgo_enabled`; output: `binary_path` |
+| `setup` | Installs Go from go.dev; restores/saves `~/go/pkg/mod` module cache when `cache_go_modules=true` |
+| `cache` | Restore or save cache entries via the GitHub Actions Cache API; inputs via `cache_input` JSON |
 
 The `main.go` pattern:
 1. `defer ac.Exit()` at top of `main()`
@@ -115,12 +118,13 @@ func boolInputOrDefault(name string, defaultVal bool) (bool, error) {
 Use HTML marker comments for idempotent updates. Call `ac.UpsertPRComment(ctx, marker, body)` on failure and `ac.DeletePRComment(ctx, marker)` on success.
 
 **Binary caching (`cache` input)**
-`action.yml` has a `cache` input (default `"true"`). When true, two steps run before bootstrap:
-1. `version` — resolves the tag via `gh release view` (falls back to `"latest"`), writes to `steps.version.outputs.tag`
-2. `actions/cache@v4` — path `$RUNNER_TEMP/actions/<family>`, key `<family>-<OS>-<arch>-<tag>`, restore-key prefix `<family>-<OS>-<arch>-`
+`action.yml` has a `cache` input (default `"true"`). When true, a `version` step runs before bootstrap to resolve the tag via the action path (falls back to `"latest"`), setting `GHA_<FAMILY>_VERSION`. `bootstrap.sh` then:
+1. Tries the filesystem cache (`$RUNNER_TEMP/actions/<family>/<tag>/<binary>`)
+2. Falls back to shell-based Actions cache API restore (curl)
+3. Falls back to `gh release download`
+4. After download, self-caches by calling `"$BINARY_PATH" cache` with `INPUT_CACHE_INPUT`
 
-`GHA_<FAMILY>_VERSION` is forwarded to `bootstrap.sh` so it targets the resolved tag directory.
-**Source-build callers must pass `cache: "false"`** to skip these steps (the binary is already in `$RUNNER_TEMP/actions/<family>/latest/`).
+**Source-build callers must pass `cache: "false"`** — the binary lands in `$RUNNER_TEMP/actions/<family>/latest/` and the filesystem check passes immediately.
 
 **Line endings — LF only**
 All shell scripts (`*.sh`) and text files must use LF line endings. CRLF causes `cannot execute: required file not found` on Linux runners because the kernel appends `\r` to the shebang interpreter path. A `.gitattributes` file at the repo root enforces this via `* text=auto eol=lf`. Never commit files with CRLF line endings; verify with `file scripts/bootstrap.sh` (must not say "CRLF").

@@ -23,10 +23,30 @@ RELEASE_TAG="${GHA_GITHUB_VERSION:-latest}"
 
 BINARY_PATH="${CACHE_DIR}/${RELEASE_TAG}/${BINARY_NAME}"
 
-# Serve from cache if available
+# Serve from filesystem cache if available
 if [[ -x "$BINARY_PATH" ]]; then
   echo "github: using cached binary at ${BINARY_PATH}"
   exec "$BINARY_PATH" "$@"
+fi
+
+# Try Actions cache restore
+CACHE_KEY="${BINARY_NAME}-${RUNNER_OS:-Linux}-${RUNNER_ARCH:-X64}-${RELEASE_TAG}"
+CACHE_VERSION=$(printf "%s\n%s\n" "$(dirname "$BINARY_PATH")" "${RUNNER_OS:-Linux}" | sha256sum | cut -d' ' -f1)
+if [[ -n "${ACTIONS_CACHE_URL:-}" && -n "${ACTIONS_RUNTIME_TOKEN:-}" ]]; then
+  RESTORE_RESP=$(curl -sf \
+    -H "Authorization: Bearer $ACTIONS_RUNTIME_TOKEN" \
+    -H "Accept: application/json;api-version=6.0-preview.1" \
+    "${ACTIONS_CACHE_URL%/}/_apis/artifactcache/cache?keys=${CACHE_KEY}&version=${CACHE_VERSION}" \
+    2>/dev/null || echo "")
+  ARCHIVE_URL=$(echo "$RESTORE_RESP" | grep -o '"archiveLocation":"[^"]*"' | head -1 | sed 's/"archiveLocation":"//;s/"$//')
+  if [[ -n "$ARCHIVE_URL" ]]; then
+    echo "github: cache hit — restoring binary"
+    mkdir -p "$(dirname "$BINARY_PATH")"
+    if curl -sL "$ARCHIVE_URL" | tar -xz -C / 2>/dev/null && [[ -x "$BINARY_PATH" ]]; then
+      exec "$BINARY_PATH" "$@"
+    fi
+    echo "github: cache restore failed, falling back to download"
+  fi
 fi
 
 mkdir -p "$(dirname "$BINARY_PATH")"
@@ -61,5 +81,11 @@ fi
 echo "github: checksum OK"
 
 chmod +x "$BINARY_PATH"
+
+# Self-cache the binary for next run
+if [[ -n "${ACTIONS_CACHE_URL:-}" && -n "${ACTIONS_RUNTIME_TOKEN:-}" ]]; then
+  INPUT_CACHE_INPUT="{\"action\":\"save\",\"path\":[\"$(dirname "$BINARY_PATH")\"],\"key\":\"${CACHE_KEY}\"}" \
+    "$BINARY_PATH" cache 2>/dev/null || true
+fi
 
 exec "$BINARY_PATH" "$@"
