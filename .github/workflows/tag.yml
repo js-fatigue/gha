@@ -14,7 +14,7 @@ jobs:
     outputs:
       dir_names: ${{ steps.changed-dirs.outputs.dir_names }}
     steps:
-      - uses: bshore/gha/actions/github@github-v0.4.0
+      - uses: bshore/gha/actions/github@github-v0.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
@@ -22,7 +22,7 @@ jobs:
 
       - name: Detect changed directories
         id: changed-dirs
-        uses: bshore/gha/actions/github@github-v0.4.0
+        uses: bshore/gha/actions/github@github-v0.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: changed-dirs
@@ -36,7 +36,7 @@ jobs:
         dir: ${{ fromJson(needs.changed-dirs.outputs.dir_names) }}
     runs-on: ubuntu-latest
     steps:
-      - uses: bshore/gha/actions/github@github-v0.4.0
+      - uses: bshore/gha/actions/github@github-v0.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
@@ -45,7 +45,7 @@ jobs:
       - name: Release
         id: release
         if: startsWith(matrix.dir, 'actions/')
-        uses: bshore/gha/actions/github@github-v0.4.0
+        uses: bshore/gha/actions/github@github-v0.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: release
