@@ -260,6 +260,53 @@ func SaveCache(inp CacheInput) error {
 	return nil
 }
 
+// SelfCacheBinary saves the running binary's directory to the Actions cache.
+// It reads INPUT_CACHE (default true) and no-ops if caching is disabled or
+// ACTIONS_CACHE_URL is not set. The cache key mirrors bootstrap.sh:
+//
+//	<binary>-<RUNNER_OS>-<RUNNER_ARCH>-<GHA_<BINARY>_VERSION>
+func SelfCacheBinary() {
+	enabled, err := GetBooleanInputOrDefault("cache", true, nil)
+	if err != nil || !enabled {
+		return
+	}
+	if os.Getenv("ACTIONS_CACHE_URL") == "" || os.Getenv("ACTIONS_RUNTIME_TOKEN") == "" {
+		return
+	}
+
+	execPath, err := os.Executable()
+	if err != nil {
+		Warning(fmt.Sprintf("self-cache: could not determine executable path: %v", err), nil)
+		return
+	}
+
+	binaryName := strings.ToLower(filepath.Base(execPath))
+	binaryDir := filepath.Dir(execPath)
+
+	runnerOS := os.Getenv("RUNNER_OS")
+	if runnerOS == "" {
+		runnerOS = "Linux"
+	}
+	runnerArch := os.Getenv("RUNNER_ARCH")
+	if runnerArch == "" {
+		runnerArch = "X64"
+	}
+
+	releaseTag := os.Getenv("GHA_" + strings.ToUpper(binaryName) + "_VERSION")
+	if releaseTag == "" {
+		releaseTag = "latest"
+	}
+
+	cacheKey := binaryName + "-" + runnerOS + "-" + runnerArch + "-" + releaseTag
+	if err := SaveCache(CacheInput{
+		Action: "save",
+		Path:   []string{binaryDir},
+		Key:    cacheKey,
+	}); err != nil {
+		Warning(fmt.Sprintf("self-cache: %v", err), nil)
+	}
+}
+
 // --- helpers ---
 
 func cacheServiceURL() (string, error) {
