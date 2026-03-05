@@ -197,6 +197,10 @@ runs:
         GITHUB_TOKEN: ${{ inputs.token }}
         INPUT_MY_INPUT: ${{ inputs.my_input }}
         GHA_<FAMILY>_VERSION: ${{ steps.version.outputs.tag }}
+        ACTIONS_CACHE_URL: ${{ env.ACTIONS_CACHE_URL }}
+        ACTIONS_RUNTIME_TOKEN: ${{ env.ACTIONS_RUNTIME_TOKEN }}
+        ACTIONS_RESULTS_URL: ${{ env.ACTIONS_RESULTS_URL }}
+        ACTIONS_RUNTIME_URL: ${{ env.ACTIONS_RUNTIME_URL }}
       run: |
         chmod +x ${{ github.action_path }}/scripts/bootstrap.sh
         ${{ github.action_path }}/scripts/bootstrap.sh "${{ inputs.command }}"
