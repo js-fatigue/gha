@@ -36,8 +36,8 @@ type v2GetCacheReq struct {
 }
 type v2GetCacheResp struct {
 	Ok                bool   `json:"ok"`
-	SignedDownloadURL string `json:"signedDownloadUrl"`
-	MatchedKey        string `json:"matchedKey"`
+	SignedDownloadURL string `json:"signed_download_url"`
+	MatchedKey        string `json:"matched_key"`
 }
 type v2CreateCacheReq struct {
 	Key     string `json:"key"`
@@ -45,7 +45,7 @@ type v2CreateCacheReq struct {
 }
 type v2CreateCacheResp struct {
 	Ok              bool   `json:"ok"`
-	SignedUploadURL string `json:"signedUploadUrl"`
+	SignedUploadURL string `json:"signed_upload_url"`
 }
 type v2FinalizeReq struct {
 	Key       string `json:"key"`

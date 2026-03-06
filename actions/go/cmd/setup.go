@@ -78,7 +78,7 @@ func runSetup() error {
 				Action:      "restore",
 				Path:        []string{"~/go/pkg/mod"},
 				Key:         key,
-				RestoreKeys: []string{fmt.Sprintf("go-modules-%s-", os.Getenv("RUNNER_OS"))},
+				RestoreKeys: []string{fmt.Sprintf("go-modules-v2-%s-", os.Getenv("RUNNER_OS"))},
 			}
 			if err := ac.RestoreCache(cacheInp); err != nil {
 				ac.Warning(fmt.Sprintf("module cache restore: %v", err), nil)
@@ -232,7 +232,7 @@ func modulesCacheKey(pattern string) (string, error) {
 		h.Write(data)
 	}
 	hash := hex.EncodeToString(h.Sum(nil))
-	return fmt.Sprintf("go-modules-%s-%s", runnerOS, hash), nil
+	return fmt.Sprintf("go-modules-v2-%s-%s", runnerOS, hash), nil
 }
 
 // readVersionFile parses a go.mod or .go-version file and returns the Go version string.
