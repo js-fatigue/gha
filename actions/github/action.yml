@@ -53,7 +53,7 @@ runs:
         v=$(basename "$(dirname "$(dirname "${{ github.action_path }}")")")
         echo "tag=${v}" >> "$GITHUB_OUTPUT"
     - id: yoink
-      uses: ./actions/yoink # bshore/gha/actions/yoink@main
+      uses: bshore/gha/actions/yoink@main
     - id: run
       shell: bash
       env:
