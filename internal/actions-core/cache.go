@@ -568,6 +568,7 @@ func extractTarGz(r io.Reader) error {
 			if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
 				return fmt.Errorf("mkdir parent of %s: %w", target, err)
 			}
+			os.Remove(target) // ignore error; handles read-only files (e.g. Go module cache uses 0444)
 			f, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.FileMode(hdr.Mode))
 			if err != nil {
 				return fmt.Errorf("creating %s: %w", target, err)
