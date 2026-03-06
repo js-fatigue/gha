@@ -197,6 +197,10 @@ runs:
         GITHUB_TOKEN: ${{ inputs.token }}
         INPUT_MY_INPUT: ${{ inputs.my_input }}
         GHA_<FAMILY>_VERSION: ${{ steps.version.outputs.tag }}
+        ACTIONS_CACHE_URL: ${{ env.ACTIONS_CACHE_URL }}
+        ACTIONS_RUNTIME_TOKEN: ${{ env.ACTIONS_RUNTIME_TOKEN }}
+        ACTIONS_RESULTS_URL: ${{ env.ACTIONS_RESULTS_URL }}
+        ACTIONS_RUNTIME_URL: ${{ env.ACTIONS_RUNTIME_URL }}
       run: |
         chmod +x ${{ github.action_path }}/scripts/bootstrap.sh
         ${{ github.action_path }}/scripts/bootstrap.sh "${{ inputs.command }}"
@@ -271,6 +275,19 @@ exec "$BINARY_PATH" "$@"
 
 ---
 
+## `README.md`
+
+Create `actions/<family>/README.md` documenting the new family. Standard structure:
+
+1. Short description paragraph
+2. **Commands** table — one row per command with name and description
+3. **Inputs** table — `token`, `command`, each `<command>_input`, family-specific inputs, `cache`
+4. **JSON input schemas** — one sub-section per command with a field table (`field`, `type`, `default`, `description`)
+5. **Outputs** table — all action outputs
+6. **Usage** section — one yaml example per command
+
+---
+
 ## Checklist
 
 - [ ] `go build ./actions/<family>/...` — compiles cleanly
@@ -280,3 +297,4 @@ exec "$BINARY_PATH" "$@"
 - [ ] PR comment marker is `<!-- <family>-error -->`
 - [ ] `cache: "false"` set in CI workflows that build from source
 - [ ] `scripts/bootstrap.sh` uses LF line endings — verify with `file scripts/bootstrap.sh` (must not say "CRLF"); `.gitattributes` enforces this on commit
+- [ ] `actions/<family>/README.md` created with Commands, Inputs, JSON schemas, Outputs, Usage sections

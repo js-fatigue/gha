@@ -1,0 +1,6 @@
+#!/bin/sh
+set -e
+printf 'ACTIONS_CACHE_URL=%s\n' "${ACTIONS_CACHE_URL:-}"         >> "$GITHUB_OUTPUT"
+printf 'ACTIONS_RUNTIME_TOKEN=%s\n' "${ACTIONS_RUNTIME_TOKEN:-}" >> "$GITHUB_OUTPUT"
+printf 'ACTIONS_RESULTS_URL=%s\n' "${ACTIONS_RESULTS_URL:-}"     >> "$GITHUB_OUTPUT"
+printf 'ACTIONS_RUNTIME_URL=%s\n' "${ACTIONS_RUNTIME_URL:-}"     >> "$GITHUB_OUTPUT"

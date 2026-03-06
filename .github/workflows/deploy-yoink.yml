@@ -1,0 +1,34 @@
+name: Publish Yoink Image
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'actions/yoink/**'
+
+permissions:
+  packages: write
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: bshore/gha/actions/github@github-v0.4.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: checkout
+          checkout_input: '{"ref": "${{ github.ref_name }}"}'
+          cache: "false"
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build and push
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          docker build -t ghcr.io/bshore/gha-yoink:latest \
+                       -t ghcr.io/bshore/gha-yoink:sha-${SHORT_SHA} \
+                       actions/yoink
+          docker push ghcr.io/bshore/gha-yoink:latest
+          docker push ghcr.io/bshore/gha-yoink:sha-${SHORT_SHA}

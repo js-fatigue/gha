@@ -53,7 +53,8 @@ runs:
       run: |
         v=$(basename "$(dirname "$(dirname "${{ github.action_path }}")")")
         echo "tag=${v}" >> "$GITHUB_OUTPUT"
-
+    - id: yoink
+      uses: ./actions/yoink #bshore/gha/actions/yoink@main
     - id: run
       shell: bash
       env:
@@ -64,6 +65,10 @@ runs:
         INPUT_CACHE_DEPENDENCY_PATH: ${{ inputs.cache_dependency_path }}
         GHA_GO_VERSION: ${{ steps.version.outputs.tag }}
         INPUT_CACHE: ${{ inputs.cache }}
+        ACTIONS_CACHE_URL: ${{ steps.yoink.outputs.ACTIONS_CACHE_URL }}
+        ACTIONS_RUNTIME_TOKEN: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_TOKEN }}
+        ACTIONS_RESULTS_URL: ${{ steps.yoink.outputs.ACTIONS_RESULTS_URL }}
+        ACTIONS_RUNTIME_URL: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_URL }}
       run: |
         chmod +x ${{ github.action_path }}/scripts/bootstrap.sh
         ${{ github.action_path }}/scripts/bootstrap.sh "${{ inputs.command }}"

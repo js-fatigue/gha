@@ -42,17 +42,8 @@ func runRelease() error {
 		return fmt.Errorf("reading context: %w", err)
 	}
 
-	var commitTitle string
-	if doRelease {
-		if ctx.Payload.HeadCommit == nil {
-			return fmt.Errorf("release=true requires a push event with head_commit (got %q)", ctx.EventName)
-		}
-		// Use only the first line of the commit message.
-		commitTitle = strings.SplitN(ctx.Payload.HeadCommit.Message, "\n", 2)[0]
-	} else {
-		if ctx.Payload.PullRequest == nil {
-			return fmt.Errorf("release=false requires a pull_request event (got %q)", ctx.EventName)
-		}
+	commitTitle := strings.SplitN(ctx.Payload.HeadCommit.Message, "\n", 2)[0]
+	if ctx.Payload.PullRequest != nil {
 		commitTitle = ctx.Payload.PullRequest.Title
 	}
 
