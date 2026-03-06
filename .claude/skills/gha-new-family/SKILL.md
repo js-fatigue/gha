@@ -286,10 +286,13 @@ Create `actions/<family>/README.md` documenting the new family. Standard structu
 
 1. Short description paragraph
 2. **Commands** table — one row per command with name and description
-3. **Inputs** table — `token`, `command`, each `<command>_input`, `self_cache`
-4. **JSON input schemas** — one sub-section per command with a field table (`field`, `type`, `default`, `description`)
+3. **Inputs** table — `token`, `command`, each `<command>_input`, `self_cache`. Do NOT list removed top-level inputs that were folded into a `*Input` struct
+4. **JSON input schemas** — one sub-section per command with a field table (`field`, `type`, `default`, `description`):
+   - For struct-pre-init defaults, show the value (e.g. `true`, `"**/go.sum"`)
+   - For auto-detected defaults, write `"auto-detected"` in the Default column and explain the detection logic in Description
+   - Add a prose line above the table: `"All fields are optional. Omit <command>_input entirely for standard usage."`
 5. **Outputs** table — all action outputs
-6. **Usage** section — one yaml example per command
+6. **Usage** section — one yaml example per command, leading with the minimal invocation (no `<command>_input`), then an override example if useful
 
 ---
 

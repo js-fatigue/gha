@@ -21,7 +21,11 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
-          checkout_input: '{"ref": "${{ github.ref_name }}", "fetch_depth": 0}'
+          checkout_input: |
+            {
+              "ref": "${{ github.ref_name }}",
+              "fetch_depth": 0
+            }
 
       - name: changed-dirs (versioned)
         id: changed-dirs

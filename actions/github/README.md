@@ -21,7 +21,7 @@ A composite GitHub Action that runs GitHub-specific automation commands via a co
 | `changed_dirs_input` | no | `""` | JSON options for the `changed-dirs` command |
 | `release_input` | no | `""` | JSON options for the `release` command |
 | `checkout_input` | no | `""` | JSON options for the `checkout` command |
-| `cache` | no | `"true"` | Cache the downloaded binary. Set to `"false"` when building from source in the same job |
+| `self_cache` | no | `"true"` | Cache the downloaded binary via the Actions cache API. Set to `"false"` when the binary is built from source in the same job |
 
 ## JSON Input Schemas
 
@@ -29,7 +29,7 @@ A composite GitHub Action that runs GitHub-specific automation commands via a co
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `base` | string | `"main"` | Base ref or SHA to diff against |
+| `base` | string | auto-detected | Base ref to diff against. Auto-detected from `origin/HEAD`, then `origin/main`/`origin/master`, then falls back to `"main"` |
 | `max_depth` | int | `0` | Max directory depth to include (0 = unlimited) |
 
 ### `release_input`
@@ -108,7 +108,8 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: changed-dirs
-          changed_dirs_input: '{"base": "main", "max_depth": 2}'
+          # base is auto-detected from origin/HEAD; pass changed_dirs_input only to override
+          changed_dirs_input: '{"max_depth": 2}'
 
   use-changes:
     needs: detect-changes

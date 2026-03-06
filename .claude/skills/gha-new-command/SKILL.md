@@ -244,10 +244,13 @@ outputs:
 Edit `actions/<family>/README.md`:
 
 1. Add the command to the **Commands** table
-2. Add `<command>_input` to the **Inputs** table
-3. Add a **JSON input schema** sub-section for `<command>_input` with a field table
+2. Add `<command>_input` to the **Inputs** table (description: `"JSON options for the <command> command (see schema below)"`)
+3. Add a **JSON input schema** sub-section for `<command>_input`:
+   - Include a field table with `field`, `type`, `default`, `description` columns
+   - For auto-detected defaults, use `"auto-detected"` in the Default column and explain the detection logic in Description
+   - Add a prose line above the table: `"All fields are optional. Omit <command>_input entirely for standard usage."`
 4. Add any new outputs to the **Outputs** table
-5. Add a **Usage** example for the new command
+5. Add a **Usage** example showing the minimal invocation (no `<command>_input`) first, then an override example if useful
 
 ---
 
