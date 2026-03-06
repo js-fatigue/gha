@@ -1,0 +1,19 @@
+name: Yoink Cache Env
+description: >
+  Exports ACTIONS_CACHE_URL, ACTIONS_RUNTIME_TOKEN, ACTIONS_RESULTS_URL,
+  and ACTIONS_RUNTIME_URL as step outputs. Docker actions receive these
+  automatically; composite run: steps do not.
+
+outputs:
+  ACTIONS_CACHE_URL:
+    description: Actions cache service URL
+  ACTIONS_RUNTIME_TOKEN:
+    description: Actions runtime token
+  ACTIONS_RESULTS_URL:
+    description: Actions results service URL
+  ACTIONS_RUNTIME_URL:
+    description: Actions runtime URL
+
+runs:
+  using: docker
+  image: Dockerfile

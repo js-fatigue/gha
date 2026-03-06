@@ -27,17 +27,17 @@ jobs:
           mkdir -p "${RUNNER_TEMP}/actions/github/latest"
           go build -o "${RUNNER_TEMP}/actions/github/latest/github" ./actions/github
 
-      - id: env
-        shell: bash
-        run: env | sort
+      - name: yoink
+        id: yoink
+        uses: ./actions/yoink
 
       - name: changed-dirs (source build)
         uses: ./actions/github
         env:
-          ACTIONS_CACHE_URL: ${{ env.ACTIONS_CACHE_URL }}
-          ACTIONS_RUNTIME_TOKEN: ${{ env.ACTIONS_RUNTIME_TOKEN }}
-          ACTIONS_RESULTS_URL: ${{ env.ACTIONS_RESULTS_URL }}
-          ACTIONS_RUNTIME_URL: ${{ env.ACTIONS_RUNTIME_URL }}
+          ACTIONS_CACHE_URL: ${{ steps.yoink.outputs.ACTIONS_CACHE_URL }}
+          ACTIONS_RUNTIME_TOKEN: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_TOKEN }}
+          ACTIONS_RESULTS_URL: ${{ steps.yoink.outputs.ACTIONS_RESULTS_URL }}
+          ACTIONS_RUNTIME_URL: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_URL }}
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: changed-dirs
@@ -47,10 +47,10 @@ jobs:
       - name: release dry run (source build)
         uses: ./actions/github
         env:
-          ACTIONS_CACHE_URL: ${{ env.ACTIONS_CACHE_URL }}
-          ACTIONS_RUNTIME_TOKEN: ${{ env.ACTIONS_RUNTIME_TOKEN }}
-          ACTIONS_RESULTS_URL: ${{ env.ACTIONS_RESULTS_URL }}
-          ACTIONS_RUNTIME_URL: ${{ env.ACTIONS_RUNTIME_URL }}
+          ACTIONS_CACHE_URL: ${{ steps.yoink.outputs.ACTIONS_CACHE_URL }}
+          ACTIONS_RUNTIME_TOKEN: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_TOKEN }}
+          ACTIONS_RESULTS_URL: ${{ steps.yoink.outputs.ACTIONS_RESULTS_URL }}
+          ACTIONS_RUNTIME_URL: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_URL }}
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: release
