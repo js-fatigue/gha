@@ -32,13 +32,15 @@ fi
 # Try Actions cache restore
 CACHE_KEY="${BINARY_NAME}-${RUNNER_OS:-Linux}-${RUNNER_ARCH:-X64}-${RELEASE_TAG}"
 CACHE_VERSION=$(printf "%s\n%s\n" "$(dirname "$BINARY_PATH")" "${RUNNER_OS:-Linux}" | sha256sum | cut -d' ' -f1)
-if [[ -n "${ACTIONS_CACHE_URL:-}" && -n "${ACTIONS_RUNTIME_TOKEN:-}" ]]; then
+if [[ -n "${ACTIONS_RESULTS_URL:-}" && -n "${ACTIONS_RUNTIME_TOKEN:-}" ]]; then
   RESTORE_RESP=$(curl -sf \
+    -X POST \
     -H "Authorization: Bearer $ACTIONS_RUNTIME_TOKEN" \
-    -H "Accept: application/json;api-version=6.0-preview.1" \
-    "${ACTIONS_CACHE_URL%/}/_apis/artifactcache/cache?keys=${CACHE_KEY}&version=${CACHE_VERSION}" \
+    -H "Content-Type: application/json" \
+    "${ACTIONS_RESULTS_URL%/}/twirp/github.actions.results.api.v1.CacheService/GetCacheEntryDownloadURL" \
+    -d "{\"key\":\"${CACHE_KEY}\",\"restoreKeys\":[],\"version\":\"${CACHE_VERSION}\"}" \
     2>/dev/null || echo "")
-  ARCHIVE_URL=$(echo "$RESTORE_RESP" | grep -o '"archiveLocation":"[^"]*"' | head -1 | sed 's/"archiveLocation":"//;s/"$//')
+  ARCHIVE_URL=$(echo "$RESTORE_RESP" | grep -o '"signed_download_url":"[^"]*"' | head -1 | sed 's/"signed_download_url":"//;s/"$//')
   if [[ -n "$ARCHIVE_URL" ]]; then
     echo "github: cache hit — restoring binary"
     mkdir -p "$(dirname "$BINARY_PATH")"
