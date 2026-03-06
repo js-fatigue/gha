@@ -5,9 +5,10 @@ on:
     branches:
       - main
     paths:
-      - 'actions/yoink/**'
+      - "actions/yoink/**"
 
 permissions:
+  contents: read
   packages: write
 
 jobs:
