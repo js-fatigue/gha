@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/go-github/v68/github"
+	"github.com/google/go-github/v84/github"
 )
 
 // UpsertPRComment deletes any existing comment whose body contains marker,
