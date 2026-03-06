@@ -49,6 +49,7 @@ type v2CreateCacheResp struct {
 }
 type v2FinalizeReq struct {
 	Key       string `json:"key"`
+	Version   string `json:"version"`
 	SizeBytes int64  `json:"size_bytes"`
 }
 type v2FinalizeResp struct {
@@ -217,6 +218,7 @@ func SaveCache(inp CacheInput) error {
 	// Finalize the cache entry.
 	finalizeBody, _ := json.Marshal(v2FinalizeReq{
 		Key:       inp.Key,
+		Version:   cacheVersion(inp.Path),
 		SizeBytes: archiveSize,
 	})
 	finalizeResp, err := cacheAPIRequest(http.MethodPost,

@@ -1,4 +1,4 @@
-# go
+# actions/go
 
 A composite GitHub Action that runs Go-specific automation commands via a compiled Go binary.
 
