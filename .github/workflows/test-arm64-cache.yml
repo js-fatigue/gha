@@ -1,0 +1,33 @@
+name: Test ARM64 Cache
+
+on:
+  push:
+    branches-ignore:
+      - main
+
+jobs:
+  test-cache:
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: arm64v8/alpine:3
+    steps:
+      - name: Install dependencies
+        run: apk add --no-cache curl
+
+      - name: Generate test file
+        run: |
+          mkdir -p ~/test-cache
+          echo "cache-test-$(date -u +%Y-%m-%d)" > ~/test-cache/test.txt
+          cat ~/test-cache/test.txt
+
+      - name: Cache test file
+        id: cache-test
+        uses: actions/cache@v4
+        with:
+          path: ~/test-cache
+          key: arm64-cache-test-${{ runner.os }}-${{ runner.arch }}-v1
+
+      - name: Report cache hit
+        run: |
+          echo "Cache hit: ${{ steps.cache-test.outputs.cache-hit }}"
+          cat ~/test-cache/test.txt
