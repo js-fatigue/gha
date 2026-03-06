@@ -7,6 +7,7 @@ on:
     paths:
       - .github/workflows/test-actions-go.yml
       - actions/go/**
+      - actions/yoink/**
 
 permissions:
   contents: read
