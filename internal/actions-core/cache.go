@@ -36,8 +36,8 @@ type v2GetCacheReq struct {
 }
 type v2GetCacheResp struct {
 	Ok                bool   `json:"ok"`
-	SignedDownloadURL string `json:"signed_download_url"`
-	MatchedKey        string `json:"matched_key"`
+	SignedDownloadURL string `json:"signedDownloadUrl"`
+	MatchedKey        string `json:"matchedKey"`
 }
 type v2CreateCacheReq struct {
 	Key     string `json:"key"`
@@ -45,7 +45,7 @@ type v2CreateCacheReq struct {
 }
 type v2CreateCacheResp struct {
 	Ok              bool   `json:"ok"`
-	SignedUploadURL string `json:"signed_upload_url"`
+	SignedUploadURL string `json:"signedUploadUrl"`
 }
 type v2FinalizeReq struct {
 	Key       string `json:"key"`
@@ -196,6 +196,11 @@ func SaveCache(inp CacheInput) error {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusConflict {
+		resp.Body.Close()
+		Info(fmt.Sprintf("cache: key %q already exists, skipping save", inp.Key))
+		return nil
+	}
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("creating cache entry returned %d: %s", resp.StatusCode, body)

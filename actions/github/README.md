@@ -1,3 +1,4 @@
+<!-- no-op counter: 2-->
 # actions/github
 
 A composite GitHub Action that runs GitHub-specific automation commands via a compiled Go binary.
