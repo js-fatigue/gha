@@ -44,7 +44,7 @@ jobs:
 
       - name: Release
         id: release
-        if: startsWith(matrix.dir, 'actions/')
+        if: startsWith(matrix.dir, 'actions/') && matrix.dir != 'actions/yoink'
         uses: bshore/gha/actions/github@github-v0.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -52,7 +52,7 @@ jobs:
           release_input: '{"action_dir": "${{ matrix.dir }}", "release": true}'
 
       - name: Build and upload release assets
-        if: startsWith(matrix.dir, 'actions/')
+        if: startsWith(matrix.dir, 'actions/') && matrix.dir != 'actions/yoink'
         env:
           CGO_ENABLED: "0"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
