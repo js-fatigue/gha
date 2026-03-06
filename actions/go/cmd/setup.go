@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"os/exec"
@@ -49,6 +50,8 @@ func runSetup() error {
 
 	cacheModulesRaw, _ := ac.GetInput("cache_go_modules", nil)
 	cacheModules := cacheModulesRaw != "false"
+	cacheGoInstallRaw, _ := ac.GetInput("cache_go_install", nil)
+	cacheGoInstall := cacheGoInstallRaw != "false"
 	cacheDependencyPath, _ := ac.GetInput("cache_dependency_path", nil)
 	if cacheDependencyPath == "" {
 		cacheDependencyPath = "**/go.sum"
@@ -77,7 +80,7 @@ func runSetup() error {
 				Action:      "restore",
 				Path:        []string{"~/go/pkg/mod"},
 				Key:         key,
-				RestoreKeys: []string{fmt.Sprintf("go-modules-%s-", os.Getenv("RUNNER_OS"))},
+				RestoreKeys: []string{fmt.Sprintf("go-modules-v2-%s-", os.Getenv("RUNNER_OS"))},
 			}
 			if err := ac.RestoreCache(cacheInp); err != nil {
 				ac.Warning(fmt.Sprintf("module cache restore: %v", err), nil)
@@ -107,6 +110,21 @@ func runSetup() error {
 	goroot := filepath.Join(toolCache, "go", version, runtime.GOOS+"-"+runtime.GOARCH)
 	goBin := filepath.Join(goroot, "bin", "go")
 
+	goInstallCacheKey := fmt.Sprintf("go-install-v1-%s-%s-%s",
+		os.Getenv("RUNNER_OS"), os.Getenv("RUNNER_ARCH"), version)
+
+	if cacheGoInstall {
+		restoreInp := ac.CacheInput{
+			Action: "restore",
+			Path:   []string{goroot},
+			Key:    goInstallCacheKey,
+		}
+		if err := ac.RestoreCache(restoreInp); err != nil {
+			ac.Warning(fmt.Sprintf("go install cache restore: %v", err), nil)
+		}
+	}
+
+	downloaded := false
 	if !inp.CheckLatest {
 		if _, err := os.Stat(goBin); err == nil {
 			ac.Info(fmt.Sprintf("Go %s already installed at %s (cache hit)", version, goroot))
@@ -114,10 +132,23 @@ func runSetup() error {
 			if err := downloadAndInstall(version, file, goroot); err != nil {
 				return err
 			}
+			downloaded = true
 		}
 	} else {
 		if err := downloadAndInstall(version, file, goroot); err != nil {
 			return err
+		}
+		downloaded = true
+	}
+
+	if cacheGoInstall && downloaded {
+		saveInp := ac.CacheInput{
+			Action: "save",
+			Path:   []string{goroot},
+			Key:    goInstallCacheKey,
+		}
+		if err := ac.SaveCache(saveInp); err != nil {
+			ac.Warning(fmt.Sprintf("go install cache save: %v", err), nil)
 		}
 	}
 
@@ -190,11 +221,37 @@ func modulesCacheKey(pattern string) (string, error) {
 		runnerOS = "Linux"
 	}
 
-	matches, err := filepath.Glob(pattern)
-	if err != nil {
-		return "", fmt.Errorf("glob %q: %w", pattern, err)
+	var matches []string
+	var err error
+
+	switch {
+	case !strings.ContainsAny(pattern, "*?["):
+		// Explicit file path — use directly.
+		matches = []string{pattern}
+	case strings.Contains(pattern, "**"):
+		// Recursive glob — filepath.Glob does not support **.
+		base := filepath.Base(pattern)
+		err = filepath.WalkDir(".", func(path string, d fs.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				return nil // skip unreadable entries
+			}
+			if !d.IsDir() && filepath.Base(path) == base {
+				matches = append(matches, path)
+			}
+			return nil
+		})
+		if err != nil {
+			return "", fmt.Errorf("walking workspace: %w", err)
+		}
+		sort.Strings(matches)
+	default:
+		// Standard single-level glob.
+		matches, err = filepath.Glob(pattern)
+		if err != nil {
+			return "", fmt.Errorf("glob %q: %w", pattern, err)
+		}
+		sort.Strings(matches)
 	}
-	sort.Strings(matches)
 
 	h := sha256.New()
 	for _, path := range matches {
@@ -205,7 +262,7 @@ func modulesCacheKey(pattern string) (string, error) {
 		h.Write(data)
 	}
 	hash := hex.EncodeToString(h.Sum(nil))
-	return fmt.Sprintf("go-modules-%s-%s", runnerOS, hash), nil
+	return fmt.Sprintf("go-modules-v2-%s-%s", runnerOS, hash), nil
 }
 
 // readVersionFile parses a go.mod or .go-version file and returns the Go version string.
