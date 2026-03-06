@@ -51,7 +51,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: setup
           setup_input: '{"go_version_file": "go.mod"}'
-          cache: "false"
+          self_cache: "false"
 
       - name: setup (source build, explicit cache key path)
         uses: ./actions/go
@@ -63,9 +63,8 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: setup
-          setup_input: '{"go_version_file": "go.mod"}'
-          cache_dependency_path: "go.sum"
-          cache: "false"
+          setup_input: '{"go_version_file": "go.mod", "cache_dependency_path": "go.sum"}'
+          self_cache: "false"
 
       - name: build (source build)
         id: build
@@ -79,4 +78,4 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: build
           build_input: '{"working_directory": "./actions/github", "output": "github-test-build"}'
-          cache: "false"
+          self_cache: "false"

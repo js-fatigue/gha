@@ -10,30 +10,23 @@ inputs:
     description: Command to run (e.g. build)
     required: true
   build_input:
-    description: JSON options for the build command
+    description: >
+      JSON options for the build command. Fields: working_directory (default "."),
+      output (default: go toolchain default), ldflags, cgo_enabled (default "0").
+      Omit entirely to build the package in the current directory.
     required: false
     default: ""
   setup_input:
-    description: JSON options for the setup command
+    description: >
+      JSON options for the setup command. Fields: go_version (default: auto-detected
+      from go.mod if present, otherwise "stable"), go_version_file (path to go.mod
+      or .go-version), check_latest (bool, default false), cache_go_modules (bool,
+      default true), cache_go_install (bool, default true), cache_dependency_path
+      (glob for go.sum files, default "**/go.sum"). Omit entirely for standard
+      usage — go.mod is detected automatically.
     required: false
     default: ""
-  cache_dependency_path:
-    description: >
-      Glob path to go.sum file(s) used for the Go module cache key.
-      Only used when command=setup. Defaults to all go.sum files.
-    required: false
-    default: "**/go.sum"
-  cache_go_modules:
-    description: >
-      Cache the Go module cache when command=setup. Default true.
-    required: false
-    default: "true"
-  cache_go_install:
-    description: >
-      Cache the Go installation when command=setup. Default true.
-    required: false
-    default: "true"
-  cache:
+  self_cache:
     description: >
       When true (default), the binary self-caches via the Actions cache API
       after first download. Set to false when the binary is built from source
@@ -53,7 +46,7 @@ runs:
   using: composite
   steps:
     - id: version
-      if: inputs.cache == 'true'
+      if: inputs.self_cache == 'true'
       shell: bash
       run: |
         v=$(basename "$(dirname "$(dirname "${{ github.action_path }}")")")
@@ -66,11 +59,8 @@ runs:
         GITHUB_TOKEN: ${{ inputs.token }}
         INPUT_BUILD_INPUT: ${{ inputs.build_input }}
         INPUT_SETUP_INPUT: ${{ inputs.setup_input }}
-        INPUT_CACHE_GO_MODULES: ${{ inputs.cache_go_modules }}
-        INPUT_CACHE_GO_INSTALL: ${{ inputs.cache_go_install }}
-        INPUT_CACHE_DEPENDENCY_PATH: ${{ inputs.cache_dependency_path }}
         GHA_GO_VERSION: ${{ steps.version.outputs.tag }}
-        INPUT_CACHE: ${{ inputs.cache }}
+        INPUT_SELF_CACHE: ${{ inputs.self_cache }}
         ACTIONS_CACHE_URL: ${{ steps.yoink.outputs.ACTIONS_CACHE_URL }}
         ACTIONS_RUNTIME_TOKEN: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_TOKEN }}
         ACTIONS_RESULTS_URL: ${{ steps.yoink.outputs.ACTIONS_RESULTS_URL }}

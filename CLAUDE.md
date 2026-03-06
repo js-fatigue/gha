@@ -117,14 +117,47 @@ func boolInputOrDefault(name string, defaultVal bool) (bool, error) {
 **PR comment upsert**
 Use HTML marker comments for idempotent updates. Call `ac.UpsertPRComment(ctx, marker, body)` on failure and `ac.DeletePRComment(ctx, marker)` on success.
 
-**Binary caching (`cache` input)**
-`action.yml` has a `cache` input (default `"true"`). When true, a `version` step runs before bootstrap to resolve the tag via the action path (falls back to `"latest"`), setting `GHA_<FAMILY>_VERSION`. `bootstrap.sh` then:
+**Binary self-caching (`self_cache` input)**
+`action.yml` has a `self_cache` input (default `"true"`). When true, a `version` step runs before bootstrap to resolve the tag via the action path (falls back to `"latest"`), setting `GHA_<FAMILY>_VERSION`. `bootstrap.sh` then:
 1. Tries the filesystem cache (`$RUNNER_TEMP/actions/<family>/<tag>/<binary>`)
 2. Falls back to shell-based Actions cache API restore (curl)
 3. Falls back to `gh release download`
 4. After download, self-caches by calling `"$BINARY_PATH" cache` with `INPUT_CACHE_INPUT`
 
-**Source-build callers must pass `cache: "false"`** — the binary lands in `$RUNNER_TEMP/actions/<family>/latest/` and the filesystem check passes immediately.
+The `self_cache` input forwards as `INPUT_SELF_CACHE`; `SelfCacheBinary()` in `cache.go` reads it via `GetBooleanInputOrDefault("self_cache", true, nil)`.
+
+**Source-build callers must pass `self_cache: "false"`** — the binary lands in `$RUNNER_TEMP/actions/<family>/latest/` and the filesystem check passes immediately.
+
+**Sane defaults — inputs should work with token + command only**
+Commands should work for the common case without any JSON input. Achieve this via two techniques:
+
+1. **Struct pre-initialization** — initialize the input struct with default values before calling `GetJSONInput`. `json.Unmarshal` only overwrites fields present in the JSON, so absent fields retain their pre-initialized defaults:
+```go
+inp := MyCommandInput{
+    SomeString: "default-value",
+    SomeBool:   true,
+}
+if err := ac.GetJSONInput("my_command_input", &inp); err != nil {
+    return fmt.Errorf("parsing my_command_input: %w", err)
+}
+```
+
+2. **Environment auto-detection** — after JSON parse, probe the environment to fill in any remaining zero-value fields. Log what was detected with `ac.Info`:
+```go
+if inp.Base == "" {
+    inp.Base = defaultBase() // git symbolic-ref → fallback to "main"
+    ac.Info(fmt.Sprintf("Auto-detected base branch: %s", inp.Base))
+}
+if inp.GoVersionFile == "" && inp.GoVersion == "" {
+    if _, err := os.Stat("go.mod"); err == nil {
+        inp.GoVersionFile = "go.mod"
+        ac.Info("Auto-detected go.mod for Go version")
+    }
+}
+```
+
+**Consolidate command options into `<command>_input` JSON, not top-level action inputs**
+All options for a given command belong on its `*Input` struct and are passed as a single JSON blob via `<command>_input`. Do NOT add separate top-level action inputs for command-specific options (e.g. `cache_go_modules` belongs in `SetupInput`, not as `INPUT_CACHE_GO_MODULES`). This keeps `action.yml` flat and callers simple.
 
 **Line endings — LF only**
 All shell scripts (`*.sh`) and text files must use LF line endings. CRLF causes `cannot execute: required file not found` on Linux runners because the kernel appends `\r` to the shebang interpreter path. A `.gitattributes` file at the repo root enforces this via `* text=auto eol=lf`. Never commit files with CRLF line endings; verify with `file scripts/bootstrap.sh` (must not say "CRLF").
@@ -145,7 +178,7 @@ Two workflow files in `.github/workflows/`:
 | `pull-request.yml` | PR opened/edited/synchronized/reopened | Validates PR title; detects changed dirs; runs `release` in dry-run mode to preview version bump |
 | `tag.yml` | Push to `main` | Detects changed action dirs; runs `release` with `release=true`; cross-compiles linux-amd64/arm64 binaries and uploads to the release |
 
-All CI workflows pass `cache: "false"` to action steps because the binary is built from source earlier in the same job.
+All CI workflows pass `self_cache: "false"` to action steps because the binary is built from source earlier in the same job.
 
 The `release` command tags format: `<family>-v<MAJOR>.<MINOR>.<PATCH>` (e.g., `github-v1.0.0`). Bump type is inferred from the commit/PR title using conventional commit conventions (`!` = major, `feat` = minor, everything else = patch).
 

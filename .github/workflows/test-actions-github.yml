@@ -43,7 +43,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: changed-dirs
           changed_dirs_input: '{"base": "main", "max_depth": 2}'
-          cache: "false"
+          self_cache: "false"
 
       - name: release dry run (source build)
         uses: ./actions/github
@@ -56,4 +56,4 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: release
           release_input: '{"action_dir": "actions/github"}'
-          cache: "false"
+          self_cache: "false"

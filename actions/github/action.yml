@@ -10,7 +10,10 @@ inputs:
     description: Command to run (e.g. changed-dirs)
     required: true
   changed_dirs_input:
-    description: JSON options for the changed-dirs command
+    description: >
+      JSON options for the changed-dirs command. Fields: base (default: auto-detected
+      from origin/HEAD, then origin/main or origin/master, then "main"), max_depth
+      (int, default 0 = unlimited). Omit entirely for standard usage.
     required: false
     default: ""
   release_input:
@@ -18,10 +21,14 @@ inputs:
     required: false
     default: ""
   checkout_input:
-    description: JSON options for the checkout command
+    description: >
+      JSON options for the checkout command. All fields have sane defaults matching
+      actions/checkout@v4: repository=$GITHUB_REPOSITORY, ref=$GITHUB_REF,
+      fetch_depth=1, clean=true, persist_credentials=true, set_safe_directory=true.
+      Omit entirely for standard usage.
     required: false
     default: ""
-  cache:
+  self_cache:
     description: >
       When true (default), the binary self-caches via the Actions cache API
       after first download. Set to false when the binary is built from source
@@ -47,7 +54,7 @@ runs:
   using: composite
   steps:
     - id: version
-      if: inputs.cache == 'true'
+      if: inputs.self_cache == 'true'
       shell: bash
       run: |
         v=$(basename "$(dirname "$(dirname "${{ github.action_path }}")")")
@@ -62,7 +69,7 @@ runs:
         INPUT_RELEASE_INPUT: ${{ inputs.release_input }}
         INPUT_CHECKOUT_INPUT: ${{ inputs.checkout_input }}
         GHA_GITHUB_VERSION: ${{ steps.version.outputs.tag }}
-        INPUT_CACHE: ${{ inputs.cache }}
+        INPUT_SELF_CACHE: ${{ inputs.self_cache }}
         ACTIONS_CACHE_URL: ${{ steps.yoink.outputs.ACTIONS_CACHE_URL }}
         ACTIONS_RUNTIME_TOKEN: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_TOKEN }}
         ACTIONS_RESULTS_URL: ${{ steps.yoink.outputs.ACTIONS_RESULTS_URL }}

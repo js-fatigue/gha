@@ -18,10 +18,34 @@ type ChangedDirsInput struct {
 
 func init() { Register("changed-dirs", runChangedDirs) }
 
+// defaultBase returns the best guess for the default branch by inspecting
+// the local git remote tracking refs. Falls back to "main".
+func defaultBase() string {
+	// Prefer origin/HEAD which git sets when the remote explicitly advertises it.
+	out, err := exec.Command("git", "symbolic-ref", "refs/remotes/origin/HEAD").Output()
+	if err == nil {
+		ref := strings.TrimSpace(string(out))
+		if b := strings.TrimPrefix(ref, "refs/remotes/origin/"); b != ref {
+			return b
+		}
+	}
+	// Fall back to checking common names locally.
+	for _, candidate := range []string{"main", "master"} {
+		if exec.Command("git", "rev-parse", "--verify", "--quiet", "origin/"+candidate).Run() == nil {
+			return candidate
+		}
+	}
+	return "main"
+}
+
 func runChangedDirs() error {
-	inp := ChangedDirsInput{Base: "main"}
+	inp := ChangedDirsInput{}
 	if err := ac.GetJSONInput("changed_dirs_input", &inp); err != nil {
 		return fmt.Errorf("parsing changed_dirs_input: %w", err)
+	}
+	if inp.Base == "" {
+		inp.Base = defaultBase()
+		ac.Info(fmt.Sprintf("Auto-detected base branch: %s", inp.Base))
 	}
 	base := inp.Base
 	maxDepth := inp.MaxDepth

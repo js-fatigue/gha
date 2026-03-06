@@ -8,22 +8,40 @@
 
 File name convention: snake_case matching the command name (e.g. `check_pr_title.go` for `check-pr-title`).
 
+Commands receive all their options via a single `<command>_input` JSON blob parsed into a typed struct. Pre-initialize the struct with defaults so callers can omit the entire input for the common case.
+
 ```go
 package cmd
 
 import (
     "fmt"
+    "os"
 
     ac "github.com/bshore/gha/internal/actions-core"
 )
 
 func init() { Register("<command-name>", run<Command>) }
 
+type <Command>Input struct {
+    MyString string `json:"my_string"`
+    MyBool   bool   `json:"my_bool"`
+}
+
 func run<Command>() error {
-    // Read inputs
-    myInput, _ := ac.GetInput("my_input", nil)
-    if myInput == "" {
-        myInput = "default-value"
+    // Pre-initialize with sane defaults — json.Unmarshal only overwrites fields
+    // present in the JSON, so absent fields retain these values.
+    inp := <Command>Input{
+        MyString: "default-value",
+        MyBool:   true,
+    }
+    if err := ac.GetJSONInput("<command_name>_input", &inp); err != nil {
+        return fmt.Errorf("parsing <command_name>_input: %w", err)
+    }
+
+    // Auto-detect from environment for any still-zero fields.
+    if inp.MyString == "" {
+        inp.MyString = detectFromEnv()
+        ac.Info(fmt.Sprintf("Auto-detected my_string: %s", inp.MyString))
     }
 
     // ... implement logic ...
@@ -38,7 +56,7 @@ func run<Command>() error {
         AddHeading("<Command>", 2).
         AddTable([][]ac.SummaryTableCell{
             {{Data: "Input", Header: true}, {Data: "Result", Header: true}},
-            {{Data: myInput}, {Data: "✅ success"}},
+            {{Data: inp.MyString}, {Data: "✅ success"}},
         })
     if err := ac.JobSummary.Write(nil); err != nil {
         ac.Warning(fmt.Sprintf("could not write job summary: %v", err), nil)
@@ -52,16 +70,52 @@ func run<Command>() error {
 
 ## 2. Input patterns
 
-### String input with default
+### Preferred: JSON struct with pre-initialized defaults
+
+All command-specific options belong on the command's `*Input` struct, not as separate top-level action inputs. This keeps `action.yml` flat and lets callers omit the input entirely for the common case.
 
 ```go
-myInput, _ := ac.GetInput("my_input", nil)
-if myInput == "" {
-    myInput = "default"
+type MyInput struct {
+    Repo    string `json:"repo"`
+    Depth   int    `json:"depth"`
+    Enabled bool   `json:"enabled"`
+}
+
+inp := MyInput{
+    Repo:    os.Getenv("GITHUB_REPOSITORY"), // env-based default
+    Depth:   1,
+    Enabled: true,
+}
+if err := ac.GetJSONInput("my_command_input", &inp); err != nil {
+    return fmt.Errorf("parsing my_command_input: %w", err)
 }
 ```
 
-### Boolean input
+`json.Unmarshal` only writes fields present in the JSON — pre-initialized values survive for any omitted fields. This is the Go equivalent of `getInput('x') || 'default'` in JS/TS actions.
+
+### Auto-detecting from the environment
+
+After JSON parse, probe files or git to fill in remaining zero-value fields:
+
+```go
+// Auto-detect from git
+if inp.Base == "" {
+    inp.Base = defaultBase() // git symbolic-ref → fallback candidates → "main"
+    ac.Info(fmt.Sprintf("Auto-detected base branch: %s", inp.Base))
+}
+
+// Auto-detect from filesystem
+if inp.GoVersionFile == "" && inp.GoVersion == "" {
+    if _, err := os.Stat("go.mod"); err == nil {
+        inp.GoVersionFile = "go.mod"
+        ac.Info("Auto-detected go.mod for Go version")
+    }
+}
+```
+
+Always log auto-detected values with `ac.Info` so runners can see what was inferred.
+
+### Boolean input (standalone, non-struct)
 
 `GetBooleanInput` errors on empty string — always use this helper:
 
@@ -75,7 +129,7 @@ func boolInputOrDefault(name string, defaultVal bool) (bool, error) {
 }
 ```
 
-### Required input
+### Required input (no default possible)
 
 ```go
 myInput, _ := ac.GetInput("my_input", nil)
@@ -145,13 +199,17 @@ a command-specific comment (rare). If so:
 
 ## 6. Update `action.yml`
 
-### Add the new input
+### Add the new `<command>_input`
+
+All command options go into a single JSON input — do NOT add separate top-level inputs for command-specific fields (put them on the struct instead):
 
 ```yaml
 inputs:
   # ... existing inputs ...
-  my_new_input:
-    description: Description of the new input
+  my_command_input:
+    description: >
+      JSON options for the my-command command. Fields: my_string (default: "default-value"),
+      my_bool (bool, default true). Omit entirely for standard usage.
     required: false
     default: ""
 ```
@@ -166,7 +224,7 @@ You MUST explicitly forward every input:
       shell: bash
       env:
         # ... existing env vars ...
-        INPUT_MY_NEW_INPUT: ${{ inputs.my_new_input }}
+        INPUT_MY_COMMAND_INPUT: ${{ inputs.my_command_input }}
 ```
 
 ### Add a new output (if needed)
@@ -196,12 +254,15 @@ Edit `actions/<family>/README.md`:
 ## 8. Checklist
 
 - [ ] New file `cmd/<name>.go` with `init()` self-registration
+- [ ] `*Input` struct pre-initialized with sane defaults before `GetJSONInput`
+- [ ] Any zero-value fields auto-detected from environment after JSON parse, logged with `ac.Info`
+- [ ] Command-specific options are struct fields on `*Input`, NOT separate top-level action inputs
 - [ ] Input names use underscores only
-- [ ] Boolean inputs use `boolInputOrDefault` helper
+- [ ] Boolean inputs in structs use struct pre-init (not `boolInputOrDefault`); standalone boolean inputs use `boolInputOrDefault`
 - [ ] `ac.SetOutput` calls wrapped in warning-on-error
 - [ ] `ac.JobSummary.Write` calls wrapped in warning-on-error
-- [ ] New inputs added to `action.yml` inputs block
-- [ ] New inputs forwarded in `action.yml` run step `env:` block as `INPUT_<NAME>`
+- [ ] `<command>_input` added to `action.yml` inputs block with description listing all fields and defaults
+- [ ] `<command>_input` forwarded in `action.yml` run step `env:` block as `INPUT_<COMMAND_NAME>_INPUT`
 - [ ] New outputs added to `action.yml` outputs block if applicable
 - [ ] `go build ./actions/<family>/...` — compiles cleanly
 - [ ] `go vet ./actions/<family>/...` — no issues
