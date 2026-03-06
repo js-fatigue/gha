@@ -559,16 +559,19 @@ func extractTarGz(r io.Reader) error {
 			if err := os.MkdirAll(target, os.FileMode(hdr.Mode)); err != nil {
 				return fmt.Errorf("mkdir %s: %w", target, err)
 			}
+			os.Chmod(target, 0755) // ensure writable for subsequent file extraction
 		case tar.TypeSymlink:
 			os.Remove(target) // ignore error; may not exist
 			if err := os.Symlink(hdr.Linkname, target); err != nil {
 				return fmt.Errorf("symlink %s: %w", target, err)
 			}
 		case tar.TypeReg, tar.TypeRegA:
-			if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+			dir := filepath.Dir(target)
+			if err := os.MkdirAll(dir, 0755); err != nil {
 				return fmt.Errorf("mkdir parent of %s: %w", target, err)
 			}
-			os.Remove(target) // ignore error; handles read-only files (e.g. Go module cache uses 0444)
+			os.Chmod(dir, 0755) // ensure writable even if it pre-existed as 0555 (e.g. Go module cache)
+			os.Remove(target)   // ignore error; handles read-only files (e.g. Go module cache uses 0444)
 			f, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.FileMode(hdr.Mode))
 			if err != nil {
 				return fmt.Errorf("creating %s: %w", target, err)
