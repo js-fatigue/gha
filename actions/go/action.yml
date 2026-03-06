@@ -28,6 +28,11 @@ inputs:
       Cache the Go module cache when command=setup. Default true.
     required: false
     default: "true"
+  cache_go_install:
+    description: >
+      Cache the Go installation when command=setup. Default true.
+    required: false
+    default: "true"
   cache:
     description: >
       When true (default), the binary self-caches via the Actions cache API
@@ -62,6 +67,7 @@ runs:
         INPUT_BUILD_INPUT: ${{ inputs.build_input }}
         INPUT_SETUP_INPUT: ${{ inputs.setup_input }}
         INPUT_CACHE_GO_MODULES: ${{ inputs.cache_go_modules }}
+        INPUT_CACHE_GO_INSTALL: ${{ inputs.cache_go_install }}
         INPUT_CACHE_DEPENDENCY_PATH: ${{ inputs.cache_dependency_path }}
         GHA_GO_VERSION: ${{ steps.version.outputs.tag }}
         INPUT_CACHE: ${{ inputs.cache }}

@@ -50,6 +50,8 @@ func runSetup() error {
 
 	cacheModulesRaw, _ := ac.GetInput("cache_go_modules", nil)
 	cacheModules := cacheModulesRaw != "false"
+	cacheGoInstallRaw, _ := ac.GetInput("cache_go_install", nil)
+	cacheGoInstall := cacheGoInstallRaw != "false"
 	cacheDependencyPath, _ := ac.GetInput("cache_dependency_path", nil)
 	if cacheDependencyPath == "" {
 		cacheDependencyPath = "**/go.sum"
@@ -108,6 +110,21 @@ func runSetup() error {
 	goroot := filepath.Join(toolCache, "go", version, runtime.GOOS+"-"+runtime.GOARCH)
 	goBin := filepath.Join(goroot, "bin", "go")
 
+	goInstallCacheKey := fmt.Sprintf("go-install-v1-%s-%s-%s",
+		os.Getenv("RUNNER_OS"), os.Getenv("RUNNER_ARCH"), version)
+
+	if cacheGoInstall {
+		restoreInp := ac.CacheInput{
+			Action: "restore",
+			Path:   []string{goroot},
+			Key:    goInstallCacheKey,
+		}
+		if err := ac.RestoreCache(restoreInp); err != nil {
+			ac.Warning(fmt.Sprintf("go install cache restore: %v", err), nil)
+		}
+	}
+
+	downloaded := false
 	if !inp.CheckLatest {
 		if _, err := os.Stat(goBin); err == nil {
 			ac.Info(fmt.Sprintf("Go %s already installed at %s (cache hit)", version, goroot))
@@ -115,10 +132,23 @@ func runSetup() error {
 			if err := downloadAndInstall(version, file, goroot); err != nil {
 				return err
 			}
+			downloaded = true
 		}
 	} else {
 		if err := downloadAndInstall(version, file, goroot); err != nil {
 			return err
+		}
+		downloaded = true
+	}
+
+	if cacheGoInstall && downloaded {
+		saveInp := ac.CacheInput{
+			Action: "save",
+			Path:   []string{goroot},
+			Key:    goInstallCacheKey,
+		}
+		if err := ac.SaveCache(saveInp); err != nil {
+			ac.Warning(fmt.Sprintf("go install cache save: %v", err), nil)
 		}
 	}
 
