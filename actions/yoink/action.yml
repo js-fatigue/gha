@@ -16,4 +16,4 @@ outputs:
 
 runs:
   using: docker
-  image: docker://ghcr.io/bshore/gha-yoink:latest
+  image: Dockerfile # docker://ghcr.io/bshore/gha-yoink:latest

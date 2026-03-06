@@ -52,7 +52,7 @@ jobs:
           checkout_input: '{"ref": "${{ github.head_ref }}"}'
 
       - name: Release (dry run)
-        if: startsWith(matrix.dir, 'actions/')
+        if: startsWith(matrix.dir, 'actions/') && matrix.dir != 'actions/yoink'
         uses: bshore/gha/actions/github@github-v0.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
