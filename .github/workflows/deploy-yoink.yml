@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "actions/yoink/**"
+      - ".github/workflows/deploy-yoink.yml"
 
 permissions:
   contents: read
@@ -15,12 +16,7 @@ jobs:
   build-push:
     runs-on: ubuntu-latest
     steps:
-      - uses: bshore/gha/actions/github@github-v0.4.1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          command: checkout
-          checkout_input: '{"ref": "${{ github.ref_name }}"}'
-          cache: "false"
+      - uses: actions/checkout@v6
 
       - name: Log in to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
