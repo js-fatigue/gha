@@ -40,7 +40,7 @@ jobs:
         id: yoink
         uses: ./actions/yoink
 
-      - name: setup (source build)
+      - name: setup (source build, default glob cache key)
         uses: ./actions/go
         env:
           ACTIONS_CACHE_URL: ${{ steps.yoink.outputs.ACTIONS_CACHE_URL }}
@@ -51,6 +51,20 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: setup
           setup_input: '{"go_version_file": "go.mod"}'
+          cache: "false"
+
+      - name: setup (source build, explicit cache key path)
+        uses: ./actions/go
+        env:
+          ACTIONS_CACHE_URL: ${{ steps.yoink.outputs.ACTIONS_CACHE_URL }}
+          ACTIONS_RUNTIME_TOKEN: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_TOKEN }}
+          ACTIONS_RESULTS_URL: ${{ steps.yoink.outputs.ACTIONS_RESULTS_URL }}
+          ACTIONS_RUNTIME_URL: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_URL }}
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: setup
+          setup_input: '{"go_version_file": "go.mod"}'
+          cache_dependency_path: "go.sum"
           cache: "false"
 
       - name: build (source build)

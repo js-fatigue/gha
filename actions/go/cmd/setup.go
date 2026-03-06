@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"os/exec"
@@ -190,11 +191,37 @@ func modulesCacheKey(pattern string) (string, error) {
 		runnerOS = "Linux"
 	}
 
-	matches, err := filepath.Glob(pattern)
-	if err != nil {
-		return "", fmt.Errorf("glob %q: %w", pattern, err)
+	var matches []string
+	var err error
+
+	switch {
+	case !strings.ContainsAny(pattern, "*?["):
+		// Explicit file path — use directly.
+		matches = []string{pattern}
+	case strings.Contains(pattern, "**"):
+		// Recursive glob — filepath.Glob does not support **.
+		base := filepath.Base(pattern)
+		err = filepath.WalkDir(".", func(path string, d fs.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				return nil // skip unreadable entries
+			}
+			if !d.IsDir() && filepath.Base(path) == base {
+				matches = append(matches, path)
+			}
+			return nil
+		})
+		if err != nil {
+			return "", fmt.Errorf("walking workspace: %w", err)
+		}
+		sort.Strings(matches)
+	default:
+		// Standard single-level glob.
+		matches, err = filepath.Glob(pattern)
+		if err != nil {
+			return "", fmt.Errorf("glob %q: %w", pattern, err)
+		}
+		sort.Strings(matches)
 	}
-	sort.Strings(matches)
 
 	h := sha256.New()
 	for _, path := range matches {
