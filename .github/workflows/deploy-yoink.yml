@@ -16,11 +16,11 @@ jobs:
   build-push:
     runs-on: ubuntu-latest
     steps:
-      # - uses: actions/checkout@v6
-      - uses: bshore/gha/actions/github@github-v0.4.1
+      - uses: bshore/gha/actions/github@github-v0.6.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
+          input: ${{ github.event.after }}
 
       - name: Log in to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin

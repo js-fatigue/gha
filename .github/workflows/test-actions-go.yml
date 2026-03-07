@@ -17,18 +17,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: bshore/gha/actions/github@github-v0.4.1
+        uses: bshore/gha/actions/github@github-v0.6.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
-          checkout_input: '{"ref": "${{ github.ref_name }}", "fetch_depth": 0}' # needs to stay until next release
-          # input: |
-          #   ref = "${{ github.ref_name }}"
-          #   fetch_depth = 0
+          input: |
+            ref = "${{ github.ref_name }}"
+            fetch_depth = 0
 
       - name: changed-dirs (versioned)
         id: changed-dirs
-        uses: bshore/gha/actions/github@github-v0.4.1
+        uses: bshore/gha/actions/github@github-v0.6.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: changed-dirs

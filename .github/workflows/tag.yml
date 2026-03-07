@@ -14,25 +14,23 @@ jobs:
     outputs:
       dir_names: ${{ steps.changed-dirs.outputs.dir_names }}
     steps:
-      - uses: bshore/gha/actions/github@github-v0.4.1
+      - uses: bshore/gha/actions/github@github-v0.6.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
-          checkout_input: '{"ref": "${{ github.ref_name }}", "fetch_depth": 0}'
-          # input: |
-          #   ref = "${{ github.ref_name }}"
-          #   fetch_depth = 0
+          input: |
+            ref = "${{ github.ref_name }}"
+            fetch_depth = 0
 
       - name: Detect changed directories
         id: changed-dirs
-        uses: bshore/gha/actions/github@github-v0.4.1
+        uses: bshore/gha/actions/github@github-v0.6.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: changed-dirs
-          changed_dirs_input: '{"base": "${{ github.event.before }}", "max_depth": 2}'
-          # input: |
-          #   base = "${{ github.event.before }}"
-          #   max_depth = 2
+          input: |
+            base = "${{ github.event.before }}"
+            max_depth = 2
 
   release:
     needs: changed-dirs
@@ -42,25 +40,22 @@ jobs:
         dir: ${{ fromJson(needs.changed-dirs.outputs.dir_names) }}
     runs-on: ubuntu-latest
     steps:
-      - uses: bshore/gha/actions/github@github-v0.4.1
+      - uses: bshore/gha/actions/github@github-v0.6.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
-          checkout_input: '{"ref": "${{ github.ref_name }}"}'
-          # input: |
-          #   ref = "${{ github.ref_name }}"
+          input: ref = "${{ github.ref_name }}"
 
       - name: Release
         id: release
         if: startsWith(matrix.dir, 'actions/') && matrix.dir != 'actions/yoink'
-        uses: bshore/gha/actions/github@github-v0.4.1
+        uses: bshore/gha/actions/github@github-v0.6.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: release
-          release_input: '{"action_dir": "${{ matrix.dir }}", "release": true}'
-          # input: |
-          #   action_dir = "${{ matrix.dir }}"
-          #   release = true
+          input: |
+            action_dir = "${{ matrix.dir }}"
+            release = true
 
       - name: Build and upload release assets
         if: startsWith(matrix.dir, 'actions/') && matrix.dir != 'actions/yoink'
