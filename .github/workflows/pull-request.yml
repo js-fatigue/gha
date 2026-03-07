@@ -27,7 +27,10 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
-          input: '{"ref": "${{ github.head_ref }}", "fetch_depth": 0}'
+          checkout_input: '{"ref": "${{ github.ref_name }}", "fetch_depth": 0}' # needs to stay until next release
+          # input: |
+          #   ref = "${{ github.head_ref }}"
+          #   fetch_depth = 0
 
       - name: Detect changed directories
         id: changed-dirs
@@ -35,7 +38,10 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: changed-dirs
-          input: '{"base": "main", "max_depth": 2}'
+          changed_dirs_input: '{"base": "main", "max_depth": 2}' # needs to stay until next release
+          # input: |
+          #   base = "main"
+          #   max_depth = 2
 
   check-actions:
     needs: changed-dirs
@@ -49,7 +55,10 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
-          input: '{"ref": "${{ github.head_ref }}"}'
+          checkout_input: '{"ref": "${{ github.head_ref }}", "fetch_depth": 0}' # needs to stay until next release
+          # input: |
+          #   ref = "${{ github.head_ref }}"
+          #   fetch_depth = 0
 
       - name: Release (dry run)
         if: startsWith(matrix.dir, 'actions/') && matrix.dir != 'actions/yoink'
@@ -57,4 +66,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: release
-          input: '{"action_dir": "${{ matrix.dir }}"}'
+          release_input: '{"action_dir": "${{ matrix.dir }}", "release": true}' # needs to stay until next release
+          # input: |
+          #   action_dir = "${{ matrix.dir }}"
+          #   release = true
