@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"runtime/debug"
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
@@ -364,8 +365,14 @@ func SetFailed(message string) {
 }
 
 // Exit calls os.Exit with the current exit code.
-// Intended for use as: defer core.Exit()
+// If called as a deferred function and a panic is in flight, it recovers the
+// panic, emits a ::error:: annotation with the panic value and stack trace,
+// and exits with code 1.
+// Intended for use as: defer ac.Exit()
 func Exit() {
+	if r := recover(); r != nil {
+		SetFailed(fmt.Sprintf("panic: %v\n\n%s", r, debug.Stack()))
+	}
 	os.Exit(int(currentExitCode))
 }
 

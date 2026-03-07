@@ -225,7 +225,29 @@ outputs:
 
 ---
 
-## 7. Update `README.md`
+## 7. Update the test workflow
+
+Edit `.github/workflows/test-actions-<family>.yml` and add a step for the new command, following the existing step pattern. Insert it after the `yoink` step and before or after other command steps:
+
+```yaml
+      - name: <command> (source build)
+        uses: ./actions/<family>
+        env:
+          ACTIONS_CACHE_URL: ${{ steps.yoink.outputs.ACTIONS_CACHE_URL }}
+          ACTIONS_RUNTIME_TOKEN: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_TOKEN }}
+          ACTIONS_RESULTS_URL: ${{ steps.yoink.outputs.ACTIONS_RESULTS_URL }}
+          ACTIONS_RUNTIME_URL: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_URL }}
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: <command>
+          self_cache: "false"
+          input: |
+            # include representative inputs if useful for smoke-testing
+```
+
+---
+
+## 8. Update `README.md`
 
 Edit `actions/<family>/README.md`:
 
@@ -239,7 +261,7 @@ Edit `actions/<family>/README.md`:
 
 ---
 
-## 8. Checklist
+## 9. Checklist
 
 - [ ] New file `cmd/<name>.go` with `init()` self-registration
 - [ ] `*Input` struct pre-initialized with sane defaults before `GetStructuredInput("input", &inp)`
@@ -257,3 +279,4 @@ Edit `actions/<family>/README.md`:
 - [ ] JSON schema sub-section added to `README.md` under `` `input` — `<command>` command ``
 - [ ] New outputs documented in `README.md` Outputs table
 - [ ] Usage example added to `README.md`
+- [ ] New command step added to `.github/workflows/test-actions-<family>.yml`

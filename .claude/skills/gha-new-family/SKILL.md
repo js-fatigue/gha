@@ -17,8 +17,6 @@ actions/<family>/
     └── bootstrap.sh
 ```
 
-No workflow changes needed — the CI matrix reads `changed-dirs` output, so new `actions/` dirs are picked up automatically.
-
 ---
 
 ## `main.go`
@@ -288,6 +286,68 @@ Create `actions/<family>/README.md` documenting the new family. Standard structu
 
 ---
 
+## `.github/workflows/test-actions-<family>.yml`
+
+Create this workflow file for integration testing on non-main branches.
+
+Key rules:
+- `paths:` must include the workflow file itself, `actions/<family>/**`, and `actions/yoink/**`
+- The build step puts the binary at `${RUNNER_TEMP}/actions/<family>/latest/<family>` — this is the filesystem cache path that `bootstrap.sh` checks first
+- All `./actions/<family>` steps must set `self_cache: "false"` and forward the four `ACTIONS_*` env vars from the `yoink` step
+- Add one step per command, named `<command> (source build)`
+
+```yaml
+name: Test <Family> Actions
+
+on:
+  push:
+    branches-ignore:
+      - main
+    paths:
+      - .github/workflows/test-actions-<family>.yml
+      - actions/<family>/**
+      - actions/yoink/**
+
+permissions:
+  contents: read
+
+jobs:
+  test-actions-<family>:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: bshore/gha/actions/github@github-v0.7.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: checkout
+          input: |
+            ref = "${{ github.ref_name }}"
+            fetch_depth = 0
+
+      - name: Build <family> binary
+        run: |
+          mkdir -p "${RUNNER_TEMP}/actions/<family>/latest"
+          go build -o "${RUNNER_TEMP}/actions/<family>/latest/<family>" ./actions/<family>
+
+      - name: yoink
+        id: yoink
+        uses: ./actions/yoink
+
+      - name: <first-command> (source build)
+        uses: ./actions/<family>
+        env:
+          ACTIONS_CACHE_URL: ${{ steps.yoink.outputs.ACTIONS_CACHE_URL }}
+          ACTIONS_RUNTIME_TOKEN: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_TOKEN }}
+          ACTIONS_RESULTS_URL: ${{ steps.yoink.outputs.ACTIONS_RESULTS_URL }}
+          ACTIONS_RUNTIME_URL: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_URL }}
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: <first-command>
+          self_cache: "false"
+```
+
+---
+
 ## Checklist
 
 - [ ] `go build ./actions/<family>/...` — compiles cleanly
@@ -298,3 +358,4 @@ Create `actions/<family>/README.md` documenting the new family. Standard structu
 - [ ] `self_cache: "false"` set in CI workflows that build from source
 - [ ] `scripts/bootstrap.sh` uses LF line endings — verify with `file scripts/bootstrap.sh` (must not say "CRLF"); `.gitattributes` enforces this on commit
 - [ ] `actions/<family>/README.md` created with Commands, Inputs, JSON schemas, Outputs, Usage sections
+- [ ] `.github/workflows/test-actions-<family>.yml` created and triggers on push to non-main branches
