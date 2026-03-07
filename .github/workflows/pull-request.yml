@@ -53,7 +53,8 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
-          input: ref = "${{ github.head_ref }}"
+          input: |
+            ref = "${{ github.head_ref }}"
 
       - name: Release (dry run)
         if: startsWith(matrix.dir, 'actions/') && matrix.dir != 'actions/yoink'
@@ -61,4 +62,5 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: release
-          input: action_dir = "${{ matrix.dir }}"
+          input: |
+            action_dir = "${{ matrix.dir }}"
