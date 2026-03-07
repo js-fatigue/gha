@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: bshore/gha/actions/github@github-v0.6.0
+        uses: bshore/gha/actions/github@github-v0.7.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
@@ -27,7 +27,7 @@ jobs:
 
       - name: changed-dirs (versioned)
         id: changed-dirs
-        uses: bshore/gha/actions/github@github-v0.6.0
+        uses: bshore/gha/actions/github@github-v0.7.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: changed-dirs
