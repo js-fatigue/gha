@@ -21,6 +21,10 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
+          checkout_input: '{"ref": "${{ github.ref_name }}", "fetch_depth": 0}' # needs to stay until next release
+          # input: |
+          #   ref = "${{ github.ref_name }}"
+          #   fetch_depth = 0
 
       - name: Log in to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
