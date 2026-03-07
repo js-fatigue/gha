@@ -8,8 +8,6 @@ on:
       - .github/workflows/test-actions-github.yml
       - actions/github/**
       - actions/yoink/**
-    paths-ignore:
-      - "**.md"
 
 permissions:
   contents: read
