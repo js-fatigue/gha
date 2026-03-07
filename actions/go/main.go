@@ -13,7 +13,6 @@ const prCommentMarker = "<!-- go-error -->"
 
 func main() {
 	defer ac.Exit()
-	panic("test panic")
 
 	if len(os.Args) < 2 {
 		ac.SetFailed("usage: go <command>")
