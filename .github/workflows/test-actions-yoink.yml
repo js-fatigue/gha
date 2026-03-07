@@ -2,7 +2,7 @@ name: Test Yoink Action
 
 on:
   push:
-    branches:
+    branches-ignore:
       - main
     paths:
       - "actions/yoink/**"
