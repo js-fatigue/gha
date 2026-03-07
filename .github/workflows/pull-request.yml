@@ -40,6 +40,8 @@ jobs:
           input: |
             base = "main"
             max_depth = 2
+            include = ["actions/"]
+            exclude = ["actions/yoink"]
 
   check-actions:
     needs: changed-dirs
@@ -57,7 +59,7 @@ jobs:
             ref = "${{ github.head_ref }}"
 
       - name: Release (dry run)
-        if: startsWith(matrix.dir, 'actions/') && matrix.dir != 'actions/yoink'
+        if: startsWith(matrix.dir, 'actions/') && matrix.dir != 'actions/yoink' # TODO: rm
         uses: bshore/gha/actions/github@github-v0.6.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}

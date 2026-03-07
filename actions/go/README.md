@@ -9,6 +9,7 @@ A composite GitHub Action that runs Go-specific automation commands via a compil
 |---|---|
 | `setup` | Installs a specific Go version from go.dev; optionally caches the module cache |
 | `build` | Wraps `go build` with configurable output path, ldflags, and CGO settings |
+| `cache` | Restore or save a cache entry via the Actions cache API |
 
 ## Inputs
 
@@ -58,6 +59,16 @@ All fields are optional. Omit `input` entirely to run `go build .` in the curren
 | `ldflags` | string | `""` | Linker flags passed to `-ldflags`, e.g. `"-s -w"` |
 | `cgo_enabled` | string | `"0"` | Value for `CGO_ENABLED` environment variable |
 
+### `input` — `cache` command
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `action` | string | **required** | `"restore"` or `"save"` |
+| `path` | []string | **required** | Paths/globs to cache |
+| `key` | string | **required** | Primary cache key |
+| `restore_keys` | []string | `[]` | Fallback prefix keys (restore only) |
+| `fail_on_miss` | bool | `false` | Error on cache miss (restore only) |
+
 ## Outputs
 
 | Output | Description |
@@ -96,6 +107,41 @@ To pin options explicitly:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: setup
           input: '{"go_version_file": "go.mod", "cache_dependency_path": "go.sum"}'
+```
+
+### `cache`
+
+Saves or restores a cache entry via the Actions cache API.
+
+**Restore:**
+
+```yaml
+jobs:
+  example:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: bshore/gha/actions/go@go-v0.4.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: cache
+          input: |
+            action       = "restore"
+            key          = "go-mod-${{ hashFiles('**/go.sum') }}"
+            restore_keys = ["go-mod-"]
+            path         = ["~/go/pkg/mod"]
+```
+
+**Save:**
+
+```yaml
+      - uses: bshore/gha/actions/go@go-v0.4.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: cache
+          input: |
+            action = "save"
+            key    = "go-mod-${{ hashFiles('**/go.sum') }}"
+            path   = ["~/go/pkg/mod"]
 ```
 
 ### `build`

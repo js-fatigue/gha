@@ -133,12 +133,12 @@ func run<Command>() error {
 ## `action.yml`
 
 Key rules:
-- `command` is passed as a CLI arg (`"${{ inputs.command }}"`), not an env var.
+- `command` is passed as a CLI arg through `bootstrap.sh` (which execs the binary with `"$@"`), not an env var.
 - Every family-specific input **must** be forwarded in the `run` step `env:` block as `INPUT_<NAME>`.
 - Input names **must use underscores** (not hyphens) — `ac.GetInput` only replaces spaces→underscores.
-- Cache vars: `GHA_<FAMILY>_VERSION` (uppercased family name).
-- Cache path: `${{ runner.temp }}/actions/<family>`.
+- Version env var: `GHA_<FAMILY>_VERSION` (uppercased family name). The `version` step detects the tag from the action path (`basename "$(dirname "$(dirname "${{ github.action_path }}")")"`) — no `gh` CLI call needed.
 - Binary self-caching uses `self_cache` input → `INPUT_SELF_CACHE` env var.
+- **`yoink` step is required** — composite `run:` steps cannot receive `ACTIONS_CACHE_URL` / `ACTIONS_RUNTIME_TOKEN` automatically. The `yoink` Docker action captures these and exposes them as step outputs. Always include it before the `run` step.
 - **Single `input` for all commands** — all command options live on that command's `*Input` struct; the action has one shared `input` field (forwarded as `INPUT_INPUT`); do NOT add per-command top-level inputs.
 - **Sane defaults** — commands must work with only `token` + `command`. Achieve this by pre-initializing the `*Input` struct before `GetStructuredInput`, then auto-detecting remaining zero-value fields from the environment (files, git refs, env vars). Log inferred values with `ac.Info`.
 
@@ -180,22 +180,12 @@ runs:
     - id: version
       if: inputs.self_cache == 'true'
       shell: bash
-      env:
-        GITHUB_TOKEN: ${{ inputs.token }}
       run: |
-        v="${GHA_<FAMILY>_VERSION:-}"
-        if [[ -z "$v" ]]; then
-          v=$(gh release view --repo bshore/gha latest --json tagName -q .tagName 2>/dev/null || echo "latest")
-        fi
+        v=$(basename "$(dirname "$(dirname "${{ github.action_path }}")")")
         echo "tag=${v}" >> "$GITHUB_OUTPUT"
 
-    - uses: actions/cache@v4
-      if: inputs.self_cache == 'true'
-      with:
-        path: ${{ runner.temp }}/actions/<family>
-        key: <family>-${{ runner.os }}-${{ runner.arch }}-${{ steps.version.outputs.tag }}
-        restore-keys: |
-          <family>-${{ runner.os }}-${{ runner.arch }}-
+    - id: yoink
+      uses: bshore/gha/actions/yoink@main
 
     - id: run
       shell: bash
@@ -204,10 +194,10 @@ runs:
         INPUT_INPUT: ${{ inputs.input }}
         GHA_<FAMILY>_VERSION: ${{ steps.version.outputs.tag }}
         INPUT_SELF_CACHE: ${{ inputs.self_cache }}
-        ACTIONS_CACHE_URL: ${{ env.ACTIONS_CACHE_URL }}
-        ACTIONS_RUNTIME_TOKEN: ${{ env.ACTIONS_RUNTIME_TOKEN }}
-        ACTIONS_RESULTS_URL: ${{ env.ACTIONS_RESULTS_URL }}
-        ACTIONS_RUNTIME_URL: ${{ env.ACTIONS_RUNTIME_URL }}
+        ACTIONS_CACHE_URL: ${{ steps.yoink.outputs.ACTIONS_CACHE_URL }}
+        ACTIONS_RUNTIME_TOKEN: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_TOKEN }}
+        ACTIONS_RESULTS_URL: ${{ steps.yoink.outputs.ACTIONS_RESULTS_URL }}
+        ACTIONS_RUNTIME_URL: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_URL }}
       run: |
         chmod +x ${{ github.action_path }}/scripts/bootstrap.sh
         ${{ github.action_path }}/scripts/bootstrap.sh "${{ inputs.command }}"

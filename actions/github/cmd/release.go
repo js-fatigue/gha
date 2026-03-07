@@ -42,7 +42,10 @@ func runRelease() error {
 		return fmt.Errorf("reading context: %w", err)
 	}
 
-	commitTitle := strings.SplitN(ctx.Payload.HeadCommit.Message, "\n", 2)[0]
+	var commitTitle string
+	if ctx.Payload.HeadCommit != nil {
+		commitTitle = strings.SplitN(ctx.Payload.HeadCommit.Message, "\n", 2)[0]
+	}
 	if ctx.Payload.PullRequest != nil {
 		commitTitle = ctx.Payload.PullRequest.Title
 	}
