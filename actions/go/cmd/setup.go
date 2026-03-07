@@ -51,8 +51,8 @@ func runSetup() error {
 		CacheGoInstall:      true,
 		CacheDependencyPath: "**/go.sum",
 	}
-	if err := ac.GetJSONInput("setup_input", &inp); err != nil {
-		return fmt.Errorf("parsing setup_input: %w", err)
+	if err := ac.GetStructuredInput("input", &inp); err != nil {
+		return fmt.Errorf("parsing input: %w", err)
 	}
 
 	// Auto-detect go.mod when no version info is specified.

@@ -21,7 +21,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
-          checkout_input: |
+          input: |
             {
               "ref": "${{ github.ref_name }}",
               "fetch_depth": 0
@@ -33,7 +33,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: changed-dirs
-          changed_dirs_input: '{"base": "main", "max_depth": 2}'
+          input: '{"base": "main", "max_depth": 2}'
 
       - name: Build go binary
         run: |
@@ -54,7 +54,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: setup
-          setup_input: '{"go_version_file": "go.mod"}'
+          input: '{"go_version_file": "go.mod"}'
           self_cache: "false"
 
       - name: setup (source build, explicit cache key path)
@@ -67,7 +67,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: setup
-          setup_input: '{"go_version_file": "go.mod", "cache_dependency_path": "go.sum"}'
+          input: '{"go_version_file": "go.mod", "cache_dependency_path": "go.sum"}'
           self_cache: "false"
 
       - name: build (source build)
@@ -81,5 +81,5 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: build
-          build_input: '{"working_directory": "./actions/github", "output": "github-test-build"}'
+          input: '{"working_directory": "./actions/github", "output": "github-test-build"}'
           self_cache: "false"

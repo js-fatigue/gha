@@ -8,7 +8,7 @@
 
 File name convention: snake_case matching the command name (e.g. `check_pr_title.go` for `check-pr-title`).
 
-Commands receive all their options via a single `<command>_input` JSON blob parsed into a typed struct. Pre-initialize the struct with defaults so callers can omit the entire input for the common case.
+Commands receive all their options via the shared `input` JSON blob (forwarded as `INPUT_INPUT`) parsed into a typed struct. Pre-initialize the struct with defaults so callers can omit the entire input for the common case.
 
 ```go
 package cmd
@@ -34,8 +34,8 @@ func run<Command>() error {
         MyString: "default-value",
         MyBool:   true,
     }
-    if err := ac.GetJSONInput("<command_name>_input", &inp); err != nil {
-        return fmt.Errorf("parsing <command_name>_input: %w", err)
+    if err := ac.GetStructuredInput("input", &inp); err != nil {
+        return fmt.Errorf("parsing input: %w", err)
     }
 
     // Auto-detect from environment for any still-zero fields.
@@ -70,9 +70,11 @@ func run<Command>() error {
 
 ## 2. Input patterns
 
-### Preferred: JSON struct with pre-initialized defaults
+### Preferred: structured input (JSON or HCL) with pre-initialized defaults
 
 All command-specific options belong on the command's `*Input` struct, not as separate top-level action inputs. This keeps `action.yml` flat and lets callers omit the input entirely for the common case.
+
+`GetStructuredInput` auto-detects the format: a trimmed value starting with `{` is parsed as JSON, anything else as HCL native syntax (`key = value`). Both use the same `json:"..."` struct tags.
 
 ```go
 type MyInput struct {
@@ -86,16 +88,26 @@ inp := MyInput{
     Depth:   1,
     Enabled: true,
 }
-if err := ac.GetJSONInput("my_command_input", &inp); err != nil {
-    return fmt.Errorf("parsing my_command_input: %w", err)
+if err := ac.GetStructuredInput("input", &inp); err != nil {
+    return fmt.Errorf("parsing input: %w", err)
 }
 ```
 
-`json.Unmarshal` only writes fields present in the JSON — pre-initialized values survive for any omitted fields. This is the Go equivalent of `getInput('x') || 'default'` in JS/TS actions.
+`json.Unmarshal` only writes fields present in the input — pre-initialized values survive for any omitted fields. Callers can pass JSON or HCL interchangeably:
+
+```yaml
+# JSON
+input: '{"depth": 2}'
+
+# HCL (tfvars-style) — friendlier for multiline block scalars
+input: |
+  depth   = 2
+  enabled = false
+```
 
 ### Auto-detecting from the environment
 
-After JSON parse, probe files or git to fill in remaining zero-value fields:
+After structured input parse, probe files or git to fill in remaining zero-value fields:
 
 ```go
 // Auto-detect from git
@@ -199,33 +211,7 @@ a command-specific comment (rare). If so:
 
 ## 6. Update `action.yml`
 
-### Add the new `<command>_input`
-
-All command options go into a single JSON input — do NOT add separate top-level inputs for command-specific fields (put them on the struct instead):
-
-```yaml
-inputs:
-  # ... existing inputs ...
-  my_command_input:
-    description: >
-      JSON options for the my-command command. Fields: my_string (default: "default-value"),
-      my_bool (bool, default true). Omit entirely for standard usage.
-    required: false
-    default: ""
-```
-
-### Forward it in the `run` step `env:` block
-
-GitHub Actions composite `run:` steps do NOT auto-populate `INPUT_*`.
-You MUST explicitly forward every input:
-
-```yaml
-    - id: run
-      shell: bash
-      env:
-        # ... existing env vars ...
-        INPUT_MY_COMMAND_INPUT: ${{ inputs.my_command_input }}
-```
+The `action.yml` already has a single `input` field shared across all commands — no new input needs to be added. The `INPUT_INPUT` env var is already forwarded in the `run` step. No `action.yml` changes are needed when adding a new command unless it introduces new action-level outputs.
 
 ### Add a new output (if needed)
 
@@ -244,32 +230,30 @@ outputs:
 Edit `actions/<family>/README.md`:
 
 1. Add the command to the **Commands** table
-2. Add `<command>_input` to the **Inputs** table (description: `"JSON options for the <command> command (see schema below)"`)
-3. Add a **JSON input schema** sub-section for `<command>_input`:
+2. Add a **JSON input schema** sub-section titled `` `input` — `<command>` command ``:
    - Include a field table with `field`, `type`, `default`, `description` columns
    - For auto-detected defaults, use `"auto-detected"` in the Default column and explain the detection logic in Description
-   - Add a prose line above the table: `"All fields are optional. Omit <command>_input entirely for standard usage."`
-4. Add any new outputs to the **Outputs** table
-5. Add a **Usage** example showing the minimal invocation (no `<command>_input`) first, then an override example if useful
+   - Add a prose line above the table: `"All fields are optional. Omit input entirely for standard usage."`
+3. Add any new outputs to the **Outputs** table
+4. Add a **Usage** example showing the minimal invocation (no `input`) first, then an override example if useful
 
 ---
 
 ## 8. Checklist
 
 - [ ] New file `cmd/<name>.go` with `init()` self-registration
-- [ ] `*Input` struct pre-initialized with sane defaults before `GetJSONInput`
+- [ ] `*Input` struct pre-initialized with sane defaults before `GetStructuredInput("input", &inp)`
 - [ ] Any zero-value fields auto-detected from environment after JSON parse, logged with `ac.Info`
 - [ ] Command-specific options are struct fields on `*Input`, NOT separate top-level action inputs
 - [ ] Input names use underscores only
 - [ ] Boolean inputs in structs use struct pre-init (not `boolInputOrDefault`); standalone boolean inputs use `boolInputOrDefault`
 - [ ] `ac.SetOutput` calls wrapped in warning-on-error
 - [ ] `ac.JobSummary.Write` calls wrapped in warning-on-error
-- [ ] `<command>_input` added to `action.yml` inputs block with description listing all fields and defaults
-- [ ] `<command>_input` forwarded in `action.yml` run step `env:` block as `INPUT_<COMMAND_NAME>_INPUT`
+- [ ] No `action.yml` input changes needed (shared `input` field already exists and `INPUT_INPUT` is already forwarded)
 - [ ] New outputs added to `action.yml` outputs block if applicable
 - [ ] `go build ./actions/<family>/...` — compiles cleanly
 - [ ] `go vet ./actions/<family>/...` — no issues
 - [ ] Command added to `README.md` Commands table
-- [ ] `<command>_input` added to `README.md` Inputs table with JSON schema sub-section
+- [ ] JSON schema sub-section added to `README.md` under `` `input` — `<command>` command ``
 - [ ] New outputs documented in `README.md` Outputs table
 - [ ] Usage example added to `README.md`

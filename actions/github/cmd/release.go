@@ -27,11 +27,11 @@ var conventionalCommitRE = regexp.MustCompile(
 
 func runRelease() error {
 	var inp ReleaseInput
-	if err := ac.GetJSONInput("release_input", &inp); err != nil {
-		return fmt.Errorf("parsing release_input: %w", err)
+	if err := ac.GetStructuredInput("input", &inp); err != nil {
+		return fmt.Errorf("parsing input: %w", err)
 	}
 	if inp.ActionDir == "" {
-		return fmt.Errorf("release_input.action_dir is required")
+		return fmt.Errorf("input.action_dir is required")
 	}
 	actionDir := inp.ActionDir
 	doRelease := inp.Release

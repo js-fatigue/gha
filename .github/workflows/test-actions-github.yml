@@ -21,7 +21,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
-          checkout_input: '{"ref": "${{ github.ref_name }}", "fetch_depth": 0}'
+          input: '{"ref": "${{ github.ref_name }}", "fetch_depth": 0}'
 
       - name: Build github binary
         run: |
@@ -42,7 +42,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: changed-dirs
-          changed_dirs_input: '{"base": "main", "max_depth": 2}'
+          input: '{"base": "main", "max_depth": 2}'
           self_cache: "false"
 
       - name: release dry run (source build)
@@ -55,5 +55,5 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: release
-          release_input: '{"action_dir": "actions/github"}'
+          input: '{"action_dir": "actions/github"}'
           self_cache: "false"

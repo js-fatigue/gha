@@ -56,11 +56,11 @@ type v2FinalizeResp struct {
 	Ok bool `json:"ok"`
 }
 
-// RunCache reads cache_input JSON and runs restore or save.
+// RunCache reads input JSON and runs restore or save.
 func RunCache() error {
 	inp := CacheInput{}
-	if err := GetJSONInput("cache_input", &inp); err != nil {
-		return fmt.Errorf("parsing cache_input: %w", err)
+	if err := GetStructuredInput("input", &inp); err != nil {
+		return fmt.Errorf("parsing input: %w", err)
 	}
 	if len(inp.Path) == 0 {
 		return fmt.Errorf("cache: path is required")

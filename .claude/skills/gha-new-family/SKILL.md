@@ -139,8 +139,8 @@ Key rules:
 - Cache vars: `GHA_<FAMILY>_VERSION` (uppercased family name).
 - Cache path: `${{ runner.temp }}/actions/<family>`.
 - Binary self-caching uses `self_cache` input → `INPUT_SELF_CACHE` env var.
-- **One `<command>_input` per command** — all command options live on that command's `*Input` struct; do NOT add separate top-level action inputs for command-specific fields.
-- **Sane defaults** — commands must work with only `token` + `command`. Achieve this by pre-initializing the `*Input` struct before `GetJSONInput`, then auto-detecting remaining zero-value fields from the environment (files, git refs, env vars). Log inferred values with `ac.Info`.
+- **Single `input` for all commands** — all command options live on that command's `*Input` struct; the action has one shared `input` field (forwarded as `INPUT_INPUT`); do NOT add per-command top-level inputs.
+- **Sane defaults** — commands must work with only `token` + `command`. Achieve this by pre-initializing the `*Input` struct before `GetStructuredInput`, then auto-detecting remaining zero-value fields from the environment (files, git refs, env vars). Log inferred values with `ac.Info`.
 
 ```yaml
 name: <Family> Actions
@@ -154,9 +154,11 @@ inputs:
   command:
     description: Command to run
     required: true
-  # --- family-specific inputs below ---
-  my_input:
-    description: Description of my_input
+  input:
+    description: >
+      Options for the command in JSON or HCL (tfvars-style) format. Auto-detected by leading '{'.
+      Fields vary by command — see README for per-command schemas.
+      All fields have sane defaults; omit entirely for standard usage.
     required: false
     default: ""
   self_cache:
@@ -199,7 +201,7 @@ runs:
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
-        INPUT_MY_COMMAND_INPUT: ${{ inputs.my_command_input }}
+        INPUT_INPUT: ${{ inputs.input }}
         GHA_<FAMILY>_VERSION: ${{ steps.version.outputs.tag }}
         INPUT_SELF_CACHE: ${{ inputs.self_cache }}
         ACTIONS_CACHE_URL: ${{ env.ACTIONS_CACHE_URL }}
@@ -286,11 +288,11 @@ Create `actions/<family>/README.md` documenting the new family. Standard structu
 
 1. Short description paragraph
 2. **Commands** table — one row per command with name and description
-3. **Inputs** table — `token`, `command`, each `<command>_input`, `self_cache`. Do NOT list removed top-level inputs that were folded into a `*Input` struct
-4. **JSON input schemas** — one sub-section per command with a field table (`field`, `type`, `default`, `description`):
+3. **Inputs** table — `token`, `command`, `input` (single row, referencing the schemas below), `self_cache`. Do NOT add per-command input rows
+4. **Input schemas** — one sub-section per command titled `` `input` — `<command>` command `` with a field table (`field`, `type`, `default`, `description`). Mention that both JSON and HCL (tfvars-style) are accepted:
    - For struct-pre-init defaults, show the value (e.g. `true`, `"**/go.sum"`)
    - For auto-detected defaults, write `"auto-detected"` in the Default column and explain the detection logic in Description
-   - Add a prose line above the table: `"All fields are optional. Omit <command>_input entirely for standard usage."`
+   - Add a prose line above the table: `"All fields are optional. Omit input entirely for standard usage."`
 5. **Outputs** table — all action outputs
 6. **Usage** section — one yaml example per command, leading with the minimal invocation (no `<command>_input`), then an override example if useful
 

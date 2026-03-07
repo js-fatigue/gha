@@ -40,8 +40,8 @@ func defaultBase() string {
 
 func runChangedDirs() error {
 	inp := ChangedDirsInput{}
-	if err := ac.GetJSONInput("changed_dirs_input", &inp); err != nil {
-		return fmt.Errorf("parsing changed_dirs_input: %w", err)
+	if err := ac.GetStructuredInput("input", &inp); err != nil {
+		return fmt.Errorf("parsing input: %w", err)
 	}
 	if inp.Base == "" {
 		inp.Base = defaultBase()
