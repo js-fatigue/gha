@@ -55,9 +55,9 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
-          checkout_input: '{"ref": "${{ github.ref_name }}", "fetch_depth": 0}' # needs to stay until next release
+          checkout_input: '{"ref": "${{ github.head_ref }}"}' # needs to stay until next release
           # input: |
-          #   ref = "${{ github.ref_name }}"
+          #   ref = "${{ github.head_ref }}"
 
       - name: Release (dry run)
         if: startsWith(matrix.dir, 'actions/') && matrix.dir != 'actions/yoink'
@@ -65,7 +65,6 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: release
-          release_input: '{"action_dir": "${{ matrix.dir }}", "release": true}' # needs to stay until next release
+          release_input: '{"action_dir": "${{ matrix.dir }}"}' # needs to stay until next release
           # input: |
           #   action_dir = "${{ matrix.dir }}"
-          #   release = true
