@@ -15,7 +15,6 @@ jobs:
       - name: Check PR title
         uses: bshore/gha/actions/github@github-v0.7.0
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           command: check-pr-title
 
   changed-dirs:
@@ -25,7 +24,6 @@ jobs:
     steps:
       - uses: bshore/gha/actions/github@github-v0.7.0
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
           input: |
             ref = "${{ github.head_ref }}"
@@ -35,7 +33,6 @@ jobs:
         id: changed-dirs
         uses: bshore/gha/actions/github@github-v0.7.0
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           command: changed-dirs
           input: |
             base = "main"
@@ -53,7 +50,6 @@ jobs:
     steps:
       - uses: bshore/gha/actions/github@github-v0.7.0
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
           input: |
             ref = "${{ github.head_ref }}"
@@ -61,7 +57,6 @@ jobs:
       - name: Release (dry run)
         uses: bshore/gha/actions/github@github-v0.7.0
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           command: release
           input: |
             action_dir = "${{ matrix.dir }}"

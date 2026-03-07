@@ -79,7 +79,6 @@ func init() { Register("command-name", runCommand) }
 |---------|-------------|
 | `build` | Wraps `go build`; inputs: `working_directory`, `output`, `ldflags`, `cgo_enabled`; output: `binary_path` |
 | `setup` | Installs Go from go.dev; restores/saves `~/go/pkg/mod` module cache when `cache_go_modules=true` |
-| `cache` | Restore or save cache entries via the GitHub Actions Cache API; inputs via `input` JSON |
 
 The `main.go` pattern:
 1. `defer ac.Exit()` at top of `main()`

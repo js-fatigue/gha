@@ -19,7 +19,7 @@ import (
 
 const azureBlockSize = 64 * 1024 * 1024 // 64 MB
 
-// CacheInput is the JSON payload for cache_input.
+// CacheInput is the JSON payload for the `input` field when running a cache command.
 type CacheInput struct {
 	Action      string   `json:"action"`       // "restore" or "save"
 	Path        []string `json:"path"`         // paths/globs to cache

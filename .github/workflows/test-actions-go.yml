@@ -19,7 +19,6 @@ jobs:
       - name: Checkout
         uses: bshore/gha/actions/github@github-v0.7.0
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
           input: |
             ref = "${{ github.ref_name }}"
@@ -42,7 +41,6 @@ jobs:
           ACTIONS_RESULTS_URL: ${{ steps.yoink.outputs.ACTIONS_RESULTS_URL }}
           ACTIONS_RUNTIME_URL: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_URL }}
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           command: setup
           self_cache: "false"
           input: |
@@ -56,7 +54,6 @@ jobs:
           ACTIONS_RESULTS_URL: ${{ steps.yoink.outputs.ACTIONS_RESULTS_URL }}
           ACTIONS_RUNTIME_URL: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_URL }}
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           command: setup
           self_cache: "false"
           input: |
@@ -72,9 +69,10 @@ jobs:
           ACTIONS_RESULTS_URL: ${{ steps.yoink.outputs.ACTIONS_RESULTS_URL }}
           ACTIONS_RUNTIME_URL: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_URL }}
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           command: build
           self_cache: "false"
           input: |
-            working_directory = "./actions/go"
-            output = "go-test-build"
+            {
+              "working_directory": "./actions/go",
+              "output": "go-test-build"
+            }
