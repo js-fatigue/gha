@@ -22,9 +22,12 @@ import (
 func init() { Register("setup", runSetup) }
 
 type SetupInput struct {
-	GoVersion     string `json:"go_version"`
-	GoVersionFile string `json:"go_version_file"`
-	CheckLatest   bool   `json:"check_latest"`
+	GoVersion           string `json:"go_version"`
+	GoVersionFile       string `json:"go_version_file"`
+	CheckLatest         bool   `json:"check_latest"`
+	CacheGoModules      bool   `json:"cache_go_modules"`
+	CacheGoInstall      bool   `json:"cache_go_install"`
+	CacheDependencyPath string `json:"cache_dependency_path"`
 }
 
 type goRelease struct {
@@ -43,18 +46,21 @@ type goFile struct {
 }
 
 func runSetup() error {
-	inp := SetupInput{}
-	if err := ac.GetJSONInput("setup_input", &inp); err != nil {
-		return fmt.Errorf("parsing setup_input: %w", err)
+	inp := SetupInput{
+		CacheGoModules:      true,
+		CacheGoInstall:      true,
+		CacheDependencyPath: "**/go.sum",
+	}
+	if err := ac.GetStructuredInput("input", &inp); err != nil {
+		return fmt.Errorf("parsing input: %w", err)
 	}
 
-	cacheModulesRaw, _ := ac.GetInput("cache_go_modules", nil)
-	cacheModules := cacheModulesRaw != "false"
-	cacheGoInstallRaw, _ := ac.GetInput("cache_go_install", nil)
-	cacheGoInstall := cacheGoInstallRaw != "false"
-	cacheDependencyPath, _ := ac.GetInput("cache_dependency_path", nil)
-	if cacheDependencyPath == "" {
-		cacheDependencyPath = "**/go.sum"
+	// Auto-detect go.mod when no version info is specified.
+	if inp.GoVersion == "" && inp.GoVersionFile == "" {
+		if _, err := os.Stat("go.mod"); err == nil {
+			inp.GoVersionFile = "go.mod"
+			ac.Info("Auto-detected go.mod for Go version")
+		}
 	}
 
 	// Resolve version from file if provided.
@@ -71,8 +77,8 @@ func runSetup() error {
 	}
 
 	// Restore module cache before installation.
-	if cacheModules {
-		key, err := modulesCacheKey(cacheDependencyPath)
+	if inp.CacheGoModules {
+		key, err := modulesCacheKey(inp.CacheDependencyPath)
 		if err != nil {
 			ac.Warning(fmt.Sprintf("module cache key: %v", err), nil)
 		} else {
@@ -113,7 +119,7 @@ func runSetup() error {
 	goInstallCacheKey := fmt.Sprintf("go-install-v1-%s-%s-%s",
 		os.Getenv("RUNNER_OS"), os.Getenv("RUNNER_ARCH"), version)
 
-	if cacheGoInstall {
+	if inp.CacheGoInstall {
 		restoreInp := ac.CacheInput{
 			Action: "restore",
 			Path:   []string{goroot},
@@ -141,7 +147,7 @@ func runSetup() error {
 		downloaded = true
 	}
 
-	if cacheGoInstall && downloaded {
+	if inp.CacheGoInstall && downloaded {
 		saveInp := ac.CacheInput{
 			Action: "save",
 			Path:   []string{goroot},
@@ -195,8 +201,8 @@ func runSetup() error {
 	}
 
 	// Save module cache after installation.
-	if cacheModules {
-		key, err := modulesCacheKey(cacheDependencyPath)
+	if inp.CacheGoModules {
+		key, err := modulesCacheKey(inp.CacheDependencyPath)
 		if err != nil {
 			ac.Warning(fmt.Sprintf("module cache key: %v", err), nil)
 		} else {

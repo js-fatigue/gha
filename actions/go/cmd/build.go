@@ -23,8 +23,8 @@ func runBuild() error {
 		WorkingDirectory: ".",
 		CGOEnabled:       "0",
 	}
-	if err := ac.GetJSONInput("build_input", &inp); err != nil {
-		return fmt.Errorf("parsing build_input: %w", err)
+	if err := ac.GetStructuredInput("input", &inp); err != nil {
+		return fmt.Errorf("parsing input: %w", err)
 	}
 	workingDir := inp.WorkingDirectory
 	output := inp.Output

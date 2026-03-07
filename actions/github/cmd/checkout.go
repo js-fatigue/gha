@@ -37,8 +37,8 @@ func runCheckout() error {
 		SparseCheckoutConeMode: true,
 		Submodules:             "false",
 	}
-	if err := ac.GetJSONInput("checkout_input", &inp); err != nil {
-		return fmt.Errorf("parsing checkout_input: %w", err)
+	if err := ac.GetStructuredInput("input", &inp); err != nil {
+		return fmt.Errorf("parsing input: %w", err)
 	}
 
 	repository := inp.Repository

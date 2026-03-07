@@ -19,6 +19,9 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
           checkout_input: '{"ref": "${{ github.ref_name }}", "fetch_depth": 0}'
+          # input: |
+          #   ref = "${{ github.ref_name }}"
+          #   fetch_depth = 0
 
       - name: Detect changed directories
         id: changed-dirs
@@ -27,6 +30,9 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: changed-dirs
           changed_dirs_input: '{"base": "${{ github.event.before }}", "max_depth": 2}'
+          # input: |
+          #   base = "${{ github.event.before }}"
+          #   max_depth = 2
 
   release:
     needs: changed-dirs
@@ -41,6 +47,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
           checkout_input: '{"ref": "${{ github.ref_name }}"}'
+          # input: |
+          #   ref = "${{ github.ref_name }}"
 
       - name: Release
         id: release
@@ -50,6 +58,9 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: release
           release_input: '{"action_dir": "${{ matrix.dir }}", "release": true}'
+          # input: |
+          #   action_dir = "${{ matrix.dir }}"
+          #   release = true
 
       - name: Build and upload release assets
         if: startsWith(matrix.dir, 'actions/') && matrix.dir != 'actions/yoink'

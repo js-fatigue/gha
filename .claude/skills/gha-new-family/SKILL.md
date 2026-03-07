@@ -138,6 +138,9 @@ Key rules:
 - Input names **must use underscores** (not hyphens) — `ac.GetInput` only replaces spaces→underscores.
 - Cache vars: `GHA_<FAMILY>_VERSION` (uppercased family name).
 - Cache path: `${{ runner.temp }}/actions/<family>`.
+- Binary self-caching uses `self_cache` input → `INPUT_SELF_CACHE` env var.
+- **Single `input` for all commands** — all command options live on that command's `*Input` struct; the action has one shared `input` field (forwarded as `INPUT_INPUT`); do NOT add per-command top-level inputs.
+- **Sane defaults** — commands must work with only `token` + `command`. Achieve this by pre-initializing the `*Input` struct before `GetStructuredInput`, then auto-detecting remaining zero-value fields from the environment (files, git refs, env vars). Log inferred values with `ac.Info`.
 
 ```yaml
 name: <Family> Actions
@@ -151,15 +154,18 @@ inputs:
   command:
     description: Command to run
     required: true
-  # --- family-specific inputs below ---
-  my_input:
-    description: Description of my_input
+  input:
+    description: >
+      Options for the command in JSON or HCL (tfvars-style) format. Auto-detected by leading '{'.
+      Fields vary by command — see README for per-command schemas.
+      All fields have sane defaults; omit entirely for standard usage.
     required: false
     default: ""
-  cache:
+  self_cache:
     description: >
-      When true (default), cache the downloaded binary using actions/cache.
-      Set to false when the binary is built from source in the same job.
+      When true (default), the binary self-caches via the Actions cache API
+      after first download. Set to false when the binary is built from source
+      in the same job.
     required: false
     default: "true"
 
@@ -172,7 +178,7 @@ runs:
   using: composite
   steps:
     - id: version
-      if: inputs.cache == 'true'
+      if: inputs.self_cache == 'true'
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
@@ -184,7 +190,7 @@ runs:
         echo "tag=${v}" >> "$GITHUB_OUTPUT"
 
     - uses: actions/cache@v4
-      if: inputs.cache == 'true'
+      if: inputs.self_cache == 'true'
       with:
         path: ${{ runner.temp }}/actions/<family>
         key: <family>-${{ runner.os }}-${{ runner.arch }}-${{ steps.version.outputs.tag }}
@@ -195,8 +201,9 @@ runs:
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
-        INPUT_MY_INPUT: ${{ inputs.my_input }}
+        INPUT_INPUT: ${{ inputs.input }}
         GHA_<FAMILY>_VERSION: ${{ steps.version.outputs.tag }}
+        INPUT_SELF_CACHE: ${{ inputs.self_cache }}
         ACTIONS_CACHE_URL: ${{ env.ACTIONS_CACHE_URL }}
         ACTIONS_RUNTIME_TOKEN: ${{ env.ACTIONS_RUNTIME_TOKEN }}
         ACTIONS_RESULTS_URL: ${{ env.ACTIONS_RESULTS_URL }}
@@ -281,10 +288,13 @@ Create `actions/<family>/README.md` documenting the new family. Standard structu
 
 1. Short description paragraph
 2. **Commands** table — one row per command with name and description
-3. **Inputs** table — `token`, `command`, each `<command>_input`, family-specific inputs, `cache`
-4. **JSON input schemas** — one sub-section per command with a field table (`field`, `type`, `default`, `description`)
+3. **Inputs** table — `token`, `command`, `input` (single row, referencing the schemas below), `self_cache`. Do NOT add per-command input rows
+4. **Input schemas** — one sub-section per command titled `` `input` — `<command>` command `` with a field table (`field`, `type`, `default`, `description`). Mention that both JSON and HCL (tfvars-style) are accepted:
+   - For struct-pre-init defaults, show the value (e.g. `true`, `"**/go.sum"`)
+   - For auto-detected defaults, write `"auto-detected"` in the Default column and explain the detection logic in Description
+   - Add a prose line above the table: `"All fields are optional. Omit input entirely for standard usage."`
 5. **Outputs** table — all action outputs
-6. **Usage** section — one yaml example per command
+6. **Usage** section — one yaml example per command, leading with the minimal invocation (no `<command>_input`), then an override example if useful
 
 ---
 
@@ -295,6 +305,6 @@ Create `actions/<family>/README.md` documenting the new family. Standard structu
 - [ ] All inputs forwarded as `INPUT_<NAME>` in `action.yml` run step env block
 - [ ] Input names use underscores only
 - [ ] PR comment marker is `<!-- <family>-error -->`
-- [ ] `cache: "false"` set in CI workflows that build from source
+- [ ] `self_cache: "false"` set in CI workflows that build from source
 - [ ] `scripts/bootstrap.sh` uses LF line endings — verify with `file scripts/bootstrap.sh` (must not say "CRLF"); `.gitattributes` enforces this on commit
 - [ ] `actions/<family>/README.md` created with Commands, Inputs, JSON schemas, Outputs, Usage sections

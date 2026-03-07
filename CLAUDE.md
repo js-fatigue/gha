@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a Go-based framework for writing GitHub Actions. The goal is to replace bash/Python/JavaScript action steps with compiled Go binaries for better performance and lower-level control. Actions are organized into "families" (e.g., `github`), each compiled to a standalone binary and distributed via GitHub Releases.
 
+**No JavaScript actions — ever.** GitHub Actions does not support JavaScript actions on arm64 runners when using an arm64 Docker image (e.g. Alpine). Avoiding JS actions is a core design principle of this project. All action logic uses compiled Go binaries in composite `run:` steps. The sole exception is `actions/yoink`, a minimal Docker action that captures cache service env vars which GitHub only injects into Docker environments, not composite run steps.
+
 ## Commands
 
 ```bash
@@ -68,7 +70,7 @@ func init() { Register("command-name", runCommand) }
 | `check-pr-title` | Validates PR title against conventional commit format |
 | `changed-dirs` | Lists directories changed between base and HEAD via `git diff` |
 | `release` | Semantic versioning — bumps version and creates GitHub Releases |
-| `cache` | Restore or save cache entries via the GitHub Actions Cache API; inputs via `cache_input` JSON |
+| `cache` | Restore or save cache entries via the GitHub Actions Cache API; inputs via `input` JSON |
 
 #### Current family: `go`
 
@@ -76,7 +78,7 @@ func init() { Register("command-name", runCommand) }
 |---------|-------------|
 | `build` | Wraps `go build`; inputs: `working_directory`, `output`, `ldflags`, `cgo_enabled`; output: `binary_path` |
 | `setup` | Installs Go from go.dev; restores/saves `~/go/pkg/mod` module cache when `cache_go_modules=true` |
-| `cache` | Restore or save cache entries via the GitHub Actions Cache API; inputs via `cache_input` JSON |
+| `cache` | Restore or save cache entries via the GitHub Actions Cache API; inputs via `input` JSON |
 
 The `main.go` pattern:
 1. `defer ac.Exit()` at top of `main()`
@@ -117,14 +119,47 @@ func boolInputOrDefault(name string, defaultVal bool) (bool, error) {
 **PR comment upsert**
 Use HTML marker comments for idempotent updates. Call `ac.UpsertPRComment(ctx, marker, body)` on failure and `ac.DeletePRComment(ctx, marker)` on success.
 
-**Binary caching (`cache` input)**
-`action.yml` has a `cache` input (default `"true"`). When true, a `version` step runs before bootstrap to resolve the tag via the action path (falls back to `"latest"`), setting `GHA_<FAMILY>_VERSION`. `bootstrap.sh` then:
+**Binary self-caching (`self_cache` input)**
+`action.yml` has a `self_cache` input (default `"true"`). When true, a `version` step runs before bootstrap to resolve the tag via the action path (falls back to `"latest"`), setting `GHA_<FAMILY>_VERSION`. `bootstrap.sh` then:
 1. Tries the filesystem cache (`$RUNNER_TEMP/actions/<family>/<tag>/<binary>`)
 2. Falls back to shell-based Actions cache API restore (curl)
 3. Falls back to `gh release download`
 4. After download, self-caches by calling `"$BINARY_PATH" cache` with `INPUT_CACHE_INPUT`
 
-**Source-build callers must pass `cache: "false"`** — the binary lands in `$RUNNER_TEMP/actions/<family>/latest/` and the filesystem check passes immediately.
+The `self_cache` input forwards as `INPUT_SELF_CACHE`; `SelfCacheBinary()` in `cache.go` reads it via `GetBooleanInputOrDefault("self_cache", true, nil)`.
+
+**Source-build callers must pass `self_cache: "false"`** — the binary lands in `$RUNNER_TEMP/actions/<family>/latest/` and the filesystem check passes immediately.
+
+**Sane defaults — inputs should work with token + command only**
+Commands should work for the common case without any input. Achieve this via two techniques:
+
+1. **Struct pre-initialization** — initialize the input struct with default values before calling `GetStructuredInput`. `json.Unmarshal` only overwrites fields present in the input, so absent fields retain their pre-initialized defaults:
+```go
+inp := MyCommandInput{
+    SomeString: "default-value",
+    SomeBool:   true,
+}
+if err := ac.GetStructuredInput("input", &inp); err != nil {
+    return fmt.Errorf("parsing input: %w", err)
+}
+```
+
+2. **Environment auto-detection** — after parsing, probe the environment to fill in any remaining zero-value fields. Log what was detected with `ac.Info`:
+```go
+if inp.Base == "" {
+    inp.Base = defaultBase() // git symbolic-ref → fallback to "main"
+    ac.Info(fmt.Sprintf("Auto-detected base branch: %s", inp.Base))
+}
+if inp.GoVersionFile == "" && inp.GoVersion == "" {
+    if _, err := os.Stat("go.mod"); err == nil {
+        inp.GoVersionFile = "go.mod"
+        ac.Info("Auto-detected go.mod for Go version")
+    }
+}
+```
+
+**Consolidate command options into a single `input` (JSON or HCL), not top-level action inputs**
+All options for a given command belong on its `*Input` struct and are passed as a single structured blob via the shared `input` action input (forwarded as `INPUT_INPUT`). The format is auto-detected by `GetStructuredInput`: trimmed input starting with `{` → JSON, anything else → HCL native syntax (`key = value`). Do NOT add separate top-level action inputs for command-specific options (e.g. `cache_go_modules` belongs in `SetupInput`, not as `INPUT_CACHE_GO_MODULES`). This keeps `action.yml` flat and callers simple — the `with:` key is always `input:` regardless of command.
 
 **Line endings — LF only**
 All shell scripts (`*.sh`) and text files must use LF line endings. CRLF causes `cannot execute: required file not found` on Linux runners because the kernel appends `\r` to the shebang interpreter path. A `.gitattributes` file at the repo root enforces this via `* text=auto eol=lf`. Never commit files with CRLF line endings; verify with `file scripts/bootstrap.sh` (must not say "CRLF").
@@ -145,7 +180,7 @@ Two workflow files in `.github/workflows/`:
 | `pull-request.yml` | PR opened/edited/synchronized/reopened | Validates PR title; detects changed dirs; runs `release` in dry-run mode to preview version bump |
 | `tag.yml` | Push to `main` | Detects changed action dirs; runs `release` with `release=true`; cross-compiles linux-amd64/arm64 binaries and uploads to the release |
 
-All CI workflows pass `cache: "false"` to action steps because the binary is built from source earlier in the same job.
+All CI workflows pass `self_cache: "false"` to action steps because the binary is built from source earlier in the same job.
 
 The `release` command tags format: `<family>-v<MAJOR>.<MINOR>.<PATCH>` (e.g., `github-v1.0.0`). Bump type is inferred from the commit/PR title using conventional commit conventions (`!` = major, `feat` = minor, everything else = patch).
 

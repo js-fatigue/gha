@@ -5,8 +5,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"os"
 	"strings"
+
+	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/hclsyntax"
+	"github.com/zclconf/go-cty/cty"
 )
 
 // ExitCode mirrors the TS ExitCode enum.
@@ -222,9 +227,11 @@ func GetBooleanInputOrDefault(name string, defaultVal bool, opts *InputOptions) 
 	return GetBooleanInput(name, opts)
 }
 
-// GetJSONInput reads the named input as a JSON string and unmarshals it into out.
-// If the input is empty, out is left unchanged (caller should pre-initialize with defaults).
-func GetJSONInput(name string, out any) error {
+// GetStructuredInput reads the named input and unmarshals it into out.
+// Format is auto-detected: if the trimmed value starts with '{' it is parsed
+// as JSON, otherwise as HCL native syntax (tfvars-style key = value).
+// If the input is empty, out is left unchanged (caller pre-initializes defaults).
+func GetStructuredInput(name string, out any) error {
 	raw, err := GetInput(name, nil)
 	if err != nil {
 		return err
@@ -232,7 +239,83 @@ func GetJSONInput(name string, out any) error {
 	if raw == "" {
 		return nil
 	}
-	return json.Unmarshal([]byte(raw), out)
+	if strings.HasPrefix(strings.TrimSpace(raw), "{") {
+		return json.Unmarshal([]byte(raw), out)
+	}
+	return decodeHCL(raw, out)
+}
+
+func decodeHCL(content string, out any) error {
+	file, diags := hclsyntax.ParseConfig([]byte(content), "<input>", hcl.Pos{Line: 1, Column: 1})
+	if diags.HasErrors() {
+		return fmt.Errorf("%s", diags.Error())
+	}
+	attrs, diags := file.Body.JustAttributes()
+	if diags.HasErrors() {
+		return fmt.Errorf("%s", diags.Error())
+	}
+	m := make(map[string]any, len(attrs))
+	for attrName, attr := range attrs {
+		val, diags := attr.Expr.Value(nil)
+		if diags.HasErrors() {
+			return fmt.Errorf("attribute %q: %s", attrName, diags.Error())
+		}
+		goVal, err := ctyToGo(val)
+		if err != nil {
+			return fmt.Errorf("attribute %q: %w", attrName, err)
+		}
+		m[attrName] = goVal
+	}
+	b, err := json.Marshal(m)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(b, out)
+}
+
+func ctyToGo(val cty.Value) (any, error) {
+	if !val.IsKnown() || val.IsNull() {
+		return nil, nil
+	}
+	ty := val.Type()
+	switch ty {
+	case cty.String:
+		return val.AsString(), nil
+	case cty.Bool:
+		return val.True(), nil
+	case cty.Number:
+		bf := val.AsBigFloat()
+		if i, acc := bf.Int64(); acc == big.Exact {
+			return i, nil
+		}
+		f, _ := bf.Float64()
+		return f, nil
+	}
+	if ty.IsListType() || ty.IsTupleType() || ty.IsSetType() {
+		var result []any
+		for it := val.ElementIterator(); it.Next(); {
+			_, v := it.Element()
+			goV, err := ctyToGo(v)
+			if err != nil {
+				return nil, err
+			}
+			result = append(result, goV)
+		}
+		return result, nil
+	}
+	if ty.IsObjectType() || ty.IsMapType() {
+		m := make(map[string]any)
+		for it := val.ElementIterator(); it.Next(); {
+			k, v := it.Element()
+			goV, err := ctyToGo(v)
+			if err != nil {
+				return nil, err
+			}
+			m[k.AsString()] = goV
+		}
+		return m, nil
+	}
+	return nil, fmt.Errorf("unsupported type: %s", ty.FriendlyName())
 }
 
 // GetBooleanInput reads a boolean action input using YAML 1.2 rules.

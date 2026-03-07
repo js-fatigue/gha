@@ -18,28 +18,44 @@ A composite GitHub Action that runs GitHub-specific automation commands via a co
 |---|---|---|---|
 | `token` | no | `github.token` | GitHub token for API calls |
 | `command` | **yes** | — | Command to run (see Commands above) |
-| `changed_dirs_input` | no | `""` | JSON options for the `changed-dirs` command |
-| `release_input` | no | `""` | JSON options for the `release` command |
-| `checkout_input` | no | `""` | JSON options for the `checkout` command |
-| `cache` | no | `"true"` | Cache the downloaded binary. Set to `"false"` when building from source in the same job |
+| `input` | no | `""` | Options for the command in JSON or HCL (tfvars-style) format — auto-detected. Fields vary by command — see schemas below. All fields have sane defaults; omit entirely for standard usage |
+| `self_cache` | no | `"true"` | Cache the downloaded binary via the Actions cache API. Set to `"false"` when the binary is built from source in the same job |
 
-## JSON Input Schemas
+## Input Schemas
 
-### `changed_dirs_input`
+The `input` field accepts **JSON** (detected by leading `{`) or **HCL native syntax** (tfvars-style `key = value`). Both formats support the same fields.
+
+```yaml
+# JSON
+input: '{"max_depth": 2}'
+
+# HCL — friendlier for multiline block scalars
+input: |
+  max_depth = 2
+  base      = "main"
+
+# Arrays in HCL
+input: |
+  action = "restore"
+  key    = "my-key"
+  path   = ["~/go/pkg/mod"]
+```
+
+### `input` — `changed-dirs` command
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `base` | string | `"main"` | Base ref or SHA to diff against |
+| `base` | string | auto-detected | Base ref to diff against. Auto-detected from `origin/HEAD`, then `origin/main`/`origin/master`, then falls back to `"main"` |
 | `max_depth` | int | `0` | Max directory depth to include (0 = unlimited) |
 
-### `release_input`
+### `input` — `release` command
 
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `action_dir` | string | **required** | Path to the action family directory, e.g. `actions/github` |
 | `release` | bool | `false` | Set to `true` to publish; omit or `false` for dry-run |
 
-### `checkout_input`
+### `input` — `checkout` command
 
 | Field | Type | Default | Description |
 |---|---|---|---|
@@ -101,14 +117,15 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
-          checkout_input: '{"fetch_depth": 0}'
+          input: '{"fetch_depth": 0}'
 
       - id: changed
         uses: bshore/gha/actions/github@github-v0.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: changed-dirs
-          changed_dirs_input: '{"base": "main", "max_depth": 2}'
+          # base is auto-detected from origin/HEAD; pass input only to override
+          input: '{"max_depth": 2}'
 
   use-changes:
     needs: detect-changes
@@ -143,13 +160,13 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
-          checkout_input: '{"fetch_depth": 0}'
+          input: '{"fetch_depth": 0}'
 
       - uses: bshore/gha/actions/github@github-v0.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: release
-          release_input: '{"action_dir": "actions/github"}'
+          input: '{"action_dir": "actions/github"}'
           # release defaults to false → dry-run only
 ```
 
@@ -170,13 +187,13 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
-          checkout_input: '{"fetch_depth": 0}'
+          input: '{"fetch_depth": 0}'
 
       - uses: bshore/gha/actions/github@github-v0.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: release
-          release_input: '{"action_dir": "actions/github", "release": true}'
+          input: '{"action_dir": "actions/github", "release": true}'
 ```
 
 ### `checkout`
@@ -192,5 +209,5 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
-          checkout_input: '{"ref": "${{ github.ref_name }}", "fetch_depth": 0}'
+          input: '{"ref": "${{ github.ref_name }}", "fetch_depth": 0}'
 ```

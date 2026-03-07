@@ -56,11 +56,11 @@ type v2FinalizeResp struct {
 	Ok bool `json:"ok"`
 }
 
-// RunCache reads cache_input JSON and runs restore or save.
+// RunCache reads input JSON and runs restore or save.
 func RunCache() error {
 	inp := CacheInput{}
-	if err := GetJSONInput("cache_input", &inp); err != nil {
-		return fmt.Errorf("parsing cache_input: %w", err)
+	if err := GetStructuredInput("input", &inp); err != nil {
+		return fmt.Errorf("parsing input: %w", err)
 	}
 	if len(inp.Path) == 0 {
 		return fmt.Errorf("cache: path is required")
@@ -263,12 +263,12 @@ func SaveCache(inp CacheInput) error {
 }
 
 // SelfCacheBinary saves the running binary's directory to the Actions cache.
-// It reads INPUT_CACHE (default true) and no-ops if caching is disabled or
+// It reads INPUT_SELF_CACHE (default true) and no-ops if caching is disabled or
 // ACTIONS_RESULTS_URL is not set. The cache key mirrors bootstrap.sh:
 //
 //	<binary>-<RUNNER_OS>-<RUNNER_ARCH>-<GHA_<BINARY>_VERSION>
 func SelfCacheBinary() {
-	enabled, err := GetBooleanInputOrDefault("cache", true, nil)
+	enabled, err := GetBooleanInputOrDefault("self_cache", true, nil)
 	if err != nil || !enabled {
 		return
 	}

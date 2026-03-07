@@ -1,19 +1,19 @@
-name: Publish Yoink Image
+name: Test Yoink Action
 
 on:
   push:
-    branches:
+    branches-ignore:
       - main
     paths:
       - "actions/yoink/**"
-      - ".github/workflows/deploy-yoink.yml"
+      - ".github/workflows/test-actions-yoink.yml"
 
 permissions:
   contents: read
   packages: write
 
 jobs:
-  build-push:
+  test-docker-build:
     runs-on: ubuntu-latest
     steps:
       # - uses: actions/checkout@v6
@@ -21,15 +21,17 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
+          checkout_input: '{"ref": "${{ github.ref_name }}", "fetch_depth": 0}' # needs to stay until next release
+          # input: |
+          #   ref = "${{ github.ref_name }}"
+          #   fetch_depth = 0
 
       - name: Log in to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Build and push
+      - name: Test build
         run: |
           SHORT_SHA="${GITHUB_SHA::7}"
           docker build -t ghcr.io/bshore/gha-yoink:latest \
                        -t ghcr.io/bshore/gha-yoink:sha-${SHORT_SHA} \
                        actions/yoink
-          docker push ghcr.io/bshore/gha-yoink:latest
-          docker push ghcr.io/bshore/gha-yoink:sha-${SHORT_SHA}
