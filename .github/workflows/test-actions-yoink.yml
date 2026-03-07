@@ -13,7 +13,7 @@ permissions:
   packages: write
 
 jobs:
-  build-push:
+  test-docker-build:
     runs-on: ubuntu-latest
     steps:
       # - uses: actions/checkout@v6

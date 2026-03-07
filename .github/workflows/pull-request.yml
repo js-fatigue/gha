@@ -55,9 +55,9 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
-          checkout_input: '{"ref": "${{ github.head_ref }}"}' # needs to stay until next release
+          checkout_input: '{"ref": "${{ github.ref_name }}"}' # needs to stay until next release
           # input: |
-          #   ref = "${{ github.head_ref }}"
+          #   ref = "${{ github.ref_name }}"
 
       - name: Release (dry run)
         if: startsWith(matrix.dir, 'actions/') && matrix.dir != 'actions/yoink'
