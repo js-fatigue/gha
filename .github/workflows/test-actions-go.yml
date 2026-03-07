@@ -76,5 +76,5 @@ jobs:
           command: build
           self_cache: "false"
           input: |
-            working_directory = "./actions/github"
-            output = "github-test-build"
+            working_directory = "./actions/go"
+            output = "go-test-build"
