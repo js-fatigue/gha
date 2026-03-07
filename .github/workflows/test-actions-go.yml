@@ -8,6 +8,8 @@ on:
       - .github/workflows/test-actions-go.yml
       - actions/go/**
       - actions/yoink/**
+    paths-ignore:
+      - "**.md"
 
 permissions:
   contents: read

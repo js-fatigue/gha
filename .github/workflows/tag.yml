@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - "**.md"
 
 permissions:
   contents: write
@@ -31,6 +33,8 @@ jobs:
           input: |
             base = "${{ github.event.before }}"
             max_depth = 2
+            include = ["actions/"]
+            exclude = ["actions/yoink"]
 
   release:
     needs: changed-dirs
@@ -49,7 +53,7 @@ jobs:
 
       - name: Release
         id: release
-        if: startsWith(matrix.dir, 'actions/') && matrix.dir != 'actions/yoink'
+        if: startsWith(matrix.dir, 'actions/') && matrix.dir != 'actions/yoink' # TODO: rm
         uses: bshore/gha/actions/github@github-v0.6.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -59,7 +63,7 @@ jobs:
             release = true
 
       - name: Build and upload release assets
-        if: startsWith(matrix.dir, 'actions/') && matrix.dir != 'actions/yoink'
+        if: startsWith(matrix.dir, 'actions/') && matrix.dir != 'actions/yoink' # TODO: rm
         env:
           CGO_ENABLED: "0"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

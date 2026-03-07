@@ -7,6 +7,8 @@ on:
     paths:
       - "images/yoink/**"
       - ".github/workflows/test-actions-yoink.yml"
+    paths-ignore:
+      - "**.md"
 
 permissions:
   contents: read

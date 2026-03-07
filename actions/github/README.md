@@ -11,6 +11,7 @@ A composite GitHub Action that runs GitHub-specific automation commands via a co
 | `changed-dirs` | Lists directories with changed files between a base ref and HEAD |
 | `release` | Bumps semver and creates a GitHub Release (dry-run by default) |
 | `checkout` | Clones or fetches a repository with full credential and sparse-checkout support |
+| `cache` | Restore or save a cache entry via the Actions cache API |
 
 ## Inputs
 
@@ -71,6 +72,16 @@ input: |
 | `set_safe_directory` | bool | `true` | Mark the checkout path as a safe directory |
 | `sparse_checkout` | string | `""` | Newline-separated sparse-checkout patterns |
 | `sparse_checkout_cone_mode` | bool | `true` | Use cone mode for sparse checkout |
+
+### `input` — `cache` command
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `action` | string | **required** | `"restore"` or `"save"` |
+| `path` | []string | **required** | Paths/globs to cache |
+| `key` | string | **required** | Primary cache key |
+| `restore_keys` | []string | `[]` | Fallback prefix keys (restore only) |
+| `fail_on_miss` | bool | `false` | Error on cache miss (restore only) |
 
 ## Outputs
 
@@ -194,6 +205,41 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: release
           input: '{"action_dir": "actions/github", "release": true}'
+```
+
+### `cache`
+
+Saves or restores a cache entry via the Actions cache API.
+
+**Restore:**
+
+```yaml
+jobs:
+  example:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: bshore/gha/actions/github@github-v0.4.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: cache
+          input: |
+            action       = "restore"
+            key          = "mykey-${{ hashFiles('**/go.sum') }}"
+            restore_keys = ["mykey-"]
+            path         = ["~/go/pkg/mod"]
+```
+
+**Save:**
+
+```yaml
+      - uses: bshore/gha/actions/github@github-v0.4.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: cache
+          input: |
+            action = "save"
+            key    = "mykey-${{ hashFiles('**/go.sum') }}"
+            path   = ["~/go/pkg/mod"]
 ```
 
 ### `checkout`

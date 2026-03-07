@@ -37,4 +37,4 @@ steps:
 
 ## Deployment
 
-The image (`ghcr.io/bshore/gha-yoink`) is rebuilt by `deploy-yoink.yml` on every push to `main` that touches `actions/yoink/`, tagged as both `:latest` and `:sha-<7char>`. The SHA is pinned in `action.yml`. Update it after pushing a new image.
+The image (`ghcr.io/bshore/gha-yoink`) is rebuilt by `deploy-yoink.yml` on every push to `main` that touches `images/yoink/`, tagged as both `:latest` and `:sha-<7char>`. The SHA is pinned in `action.yml`. Update it after pushing a new image.

@@ -71,6 +71,7 @@ func init() { Register("command-name", runCommand) }
 | `changed-dirs` | Lists directories changed between base and HEAD via `git diff` |
 | `release` | Semantic versioning — bumps version and creates GitHub Releases |
 | `cache` | Restore or save cache entries via the GitHub Actions Cache API; inputs via `input` JSON |
+| `checkout` | Checks out a ref and sets `ref` + `commit` outputs |
 
 #### Current family: `go`
 
@@ -101,9 +102,11 @@ env:
 `ac.GetInput` uppercases and replaces spaces→underscores only. Hyphens remain as-is, producing invalid env var names. Use underscores in input names.
 
 **Command dispatch via `os.Args[1]`**
-The `command` input is passed as a CLI argument, not an env var:
+The `command` input is passed as a CLI argument through `bootstrap.sh`, which execs the binary with `"$@"`. The Go binary receives the command as `os.Args[1]`:
 ```yaml
-run: ${{ github.action_path }}/<family> "${{ inputs.command }}"
+run: |
+  chmod +x ${{ github.action_path }}/scripts/bootstrap.sh
+  ${{ github.action_path }}/scripts/bootstrap.sh "${{ inputs.command }}"
 ```
 
 **Boolean input helper**
@@ -173,12 +176,16 @@ All shell scripts (`*.sh`) and text files must use LF line endings. CRLF causes 
 
 ## CI
 
-Two workflow files in `.github/workflows/`:
+Six workflow files in `.github/workflows/`:
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
 | `pull-request.yml` | PR opened/edited/synchronized/reopened | Validates PR title; detects changed dirs; runs `release` in dry-run mode to preview version bump |
 | `tag.yml` | Push to `main` | Detects changed action dirs; runs `release` with `release=true`; cross-compiles linux-amd64/arm64 binaries and uploads to the release |
+| `deploy-yoink.yml` | Push to `main` (paths: `images/yoink/**`) | Builds and publishes the `yoink` Docker image to GHCR |
+| `test-actions-github.yml` | Push to non-main branches (paths: `actions/github/**`, `actions/yoink/**`) | Integration tests for the `github` action family |
+| `test-actions-go.yml` | Push to non-main branches (paths: `actions/go/**`, `actions/yoink/**`) | Integration tests for the `go` action family |
+| `test-actions-yoink.yml` | Push to non-main branches (paths: `images/yoink/**`) | Integration tests for the `yoink` Docker action |
 
 All CI workflows pass `self_cache: "false"` to action steps because the binary is built from source earlier in the same job.
 

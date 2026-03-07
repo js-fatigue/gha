@@ -12,8 +12,10 @@ import (
 )
 
 type ChangedDirsInput struct {
-	Base     string `json:"base"`
-	MaxDepth int    `json:"max_depth"`
+	Base     string   `json:"base"`
+	MaxDepth int      `json:"max_depth"`
+	Include  []string `json:"include"` // keep only dirs with these prefixes (empty = keep all)
+	Exclude  []string `json:"exclude"` // drop dirs matching exactly (empty = drop none)
 }
 
 func init() { Register("changed-dirs", runChangedDirs) }
@@ -86,6 +88,7 @@ func runChangedDirs() error {
 		dirs = append(dirs, d)
 	}
 	sort.Strings(dirs)
+	dirs = filterDirs(dirs, inp.Include, inp.Exclude)
 	dirNamesJSON, _ := json.Marshal(dirs)
 
 	// Set output before any early return so it is always populated.
@@ -133,6 +136,35 @@ func runChangedDirs() error {
 	}
 
 	return nil
+}
+
+func filterDirs(dirs, include, exclude []string) []string {
+	out := dirs[:0:0]
+	for _, d := range dirs {
+		if len(include) > 0 {
+			matched := false
+			for _, pfx := range include {
+				if strings.HasPrefix(d, pfx) {
+					matched = true
+					break
+				}
+			}
+			if !matched {
+				continue
+			}
+		}
+		excluded := false
+		for _, ex := range exclude {
+			if d == ex {
+				excluded = true
+				break
+			}
+		}
+		if !excluded {
+			out = append(out, d)
+		}
+	}
+	return out
 }
 
 func capDir(dir string, maxDepth int) string {
