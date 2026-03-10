@@ -20,9 +20,13 @@ The script prepares the go binary, and executes it with the command from the act
 
 ![](docs/action-family.svg)
 
-TODOS:
+## TODOS:
 
-Deep dive to double-check my intention versus what claude produced
-Prep for demo/walkthrough
-List of pros/cons when compared to bash/ts actions
-Have claude write more unit tests and make the code more testable where possible
+Integrate with GitHub GraphQL API when (if) needed. This would be super useful, especially if the TF Provider used it (ex: can commit [multiple files at once](https://docs.github.com/en/graphql/reference/mutations#createcommitonbranch)). No official Go client library yet, community library is [shurcooL/githubv4](https://github.com/shurcooL/githubv4)
+
+- Docker
+- Python
+- AWS
+- Terraform
+- 1Password
+- ...

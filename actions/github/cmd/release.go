@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os/exec"
 	"path"
 	"regexp"
 	"strconv"
@@ -35,7 +34,7 @@ func runRelease() error {
 	}
 	actionDir := inp.ActionDir
 	doRelease := inp.Release
-	familyName := path.Base(actionDir) // e.g. "actions/github" → "github"
+	familyName := path.Base(actionDir)
 
 	ctx, err := ac.NewContext()
 	if err != nil {
@@ -79,14 +78,12 @@ func runRelease() error {
 	}
 
 	if doRelease {
-		// Push the git tag first so the tag-push event triggers the release
-		// asset workflow. Releases created solely via the REST API do not fire
-		// push-tag events and therefore would never trigger release.yml.
-		if out, err := exec.Command("git", "tag", nextTag).CombinedOutput(); err != nil {
-			return fmt.Errorf("creating git tag %s: %w\n%s", nextTag, err, out)
+		// Create & push the git tag first
+		if res, err := ac.Exec("git", "tag", nextTag); err != nil {
+			return fmt.Errorf("creating git tag %s: %w\n%s", nextTag, err, res.Stderr)
 		}
-		if out, err := exec.Command("git", "push", "origin", nextTag).CombinedOutput(); err != nil {
-			return fmt.Errorf("pushing git tag %s: %w\n%s", nextTag, err, out)
+		if res, err := ac.Exec("git", "push", "origin", nextTag); err != nil {
+			return fmt.Errorf("pushing git tag %s: %w\n%s", nextTag, err, res.Stderr)
 		}
 		ac.Info(fmt.Sprintf("Pushed tag: %s", nextTag))
 
@@ -111,44 +108,40 @@ func runRelease() error {
 		}
 
 		// Write step summary.
-		ac.JobSummary.
-			AddHeading(fmt.Sprintf("Release: `%s`", familyName), 2).
-			AddTable([][]ac.SummaryTableCell{
-				{
-					{Data: "Commit Title", Header: true},
-					{Data: "Bump Type", Header: true},
-					{Data: "Previous Tag", Header: true},
-					{Data: "Released Tag", Header: true},
-				},
-				{
-					{Data: commitTitle},
-					{Data: bumpType},
-					{Data: currentTagDisplay},
-					{Data: nextTag},
-				},
-			})
+		ac.JobSummary.AddHeading(fmt.Sprintf("Release: `%s`", familyName), 2).AddTable([][]ac.SummaryTableCell{
+			{
+				{Data: "Commit Title", Header: true},
+				{Data: "Bump Type", Header: true},
+				{Data: "Previous Tag", Header: true},
+				{Data: "Released Tag", Header: true},
+			},
+			{
+				{Data: commitTitle},
+				{Data: bumpType},
+				{Data: currentTagDisplay},
+				{Data: nextTag},
+			},
+		})
 
 		if err := ac.JobSummary.Write(nil); err != nil {
 			ac.Warning(fmt.Sprintf("could not write job summary: %v", err), nil)
 		}
 	} else {
 		// Dry-run: write summary and upsert PR comment.
-		ac.JobSummary.
-			AddHeading(fmt.Sprintf("Dry-Run Release: `%s`", familyName), 2).
-			AddTable([][]ac.SummaryTableCell{
-				{
-					{Data: "PR Title", Header: true},
-					{Data: "Bump Type", Header: true},
-					{Data: "Current Tag", Header: true},
-					{Data: "Next Tag", Header: true},
-				},
-				{
-					{Data: commitTitle},
-					{Data: bumpType},
-					{Data: currentTagDisplay},
-					{Data: nextTag},
-				},
-			})
+		ac.JobSummary.AddHeading(fmt.Sprintf("Dry-Run Release: `%s`", familyName), 2).AddTable([][]ac.SummaryTableCell{
+			{
+				{Data: "PR Title", Header: true},
+				{Data: "Bump Type", Header: true},
+				{Data: "Current Tag", Header: true},
+				{Data: "Next Tag", Header: true},
+			},
+			{
+				{Data: commitTitle},
+				{Data: bumpType},
+				{Data: currentTagDisplay},
+				{Data: nextTag},
+			},
+		})
 
 		if err := ac.JobSummary.Write(nil); err != nil {
 			ac.Warning(fmt.Sprintf("could not write job summary: %v", err), nil)

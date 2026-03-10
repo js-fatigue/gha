@@ -20,6 +20,24 @@ var (
 	)
 )
 
+// checkPRTitle validates a PR title against the conventional commit format.
+// Returns a non-nil error with a human-readable message when the title is invalid.
+func checkPRTitle(title string) error {
+	if title == "" {
+		return fmt.Errorf("pull request title is empty")
+	}
+	if !prTitleRE.MatchString(title) {
+		return fmt.Errorf(
+			"PR title %q does not follow conventional commit format.\n"+
+				"Expected: `<type>[(<scope>)][!]: <description>`\n"+
+				"Valid types: %s",
+			title,
+			strings.Join(conventionalTypes, ", "),
+		)
+	}
+	return nil
+}
+
 func runCheckPRTitle() error {
 	ctx, err := ac.NewContext()
 	if err != nil {
@@ -31,20 +49,10 @@ func runCheckPRTitle() error {
 	}
 
 	title := ctx.Payload.PullRequest.Title
-	if title == "" {
-		return fmt.Errorf("pull request title is empty")
-	}
-
 	ac.Info(fmt.Sprintf("Checking PR title: %q", title))
 
-	if !prTitleRE.MatchString(title) {
-		return fmt.Errorf(
-			"PR title %q does not follow conventional commit format.\n"+
-				"Expected: `<type>[(<scope>)][!]: <description>`\n"+
-				"Valid types: %s",
-			title,
-			strings.Join(conventionalTypes, ", "),
-		)
+	if err := checkPRTitle(title); err != nil {
+		return err
 	}
 
 	ac.Info(fmt.Sprintf("PR title is valid: %q", title))

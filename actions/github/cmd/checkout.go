@@ -14,18 +14,18 @@ import (
 func init() { Register("checkout", runCheckout) }
 
 type CheckoutInput struct {
-	Repository           string `json:"repository"`
-	Ref                  string `json:"ref"`
-	Path                 string `json:"path"`
-	FetchDepth           int    `json:"fetch_depth"`
-	FetchTags            bool   `json:"fetch_tags"`
-	Clean                bool   `json:"clean"`
-	Submodules           string `json:"submodules"`
-	LFS                  bool   `json:"lfs"`
-	PersistCredentials   bool   `json:"persist_credentials"`
-	SetSafeDirectory     bool   `json:"set_safe_directory"`
-	SparseCheckout       string `json:"sparse_checkout"`
-	SparseCheckoutConeMode bool `json:"sparse_checkout_cone_mode"`
+	Repository             string `json:"repository"`
+	Ref                    string `json:"ref"`
+	Path                   string `json:"path"`
+	FetchDepth             int    `json:"fetch_depth"`
+	FetchTags              bool   `json:"fetch_tags"`
+	Clean                  bool   `json:"clean"`
+	Submodules             string `json:"submodules"`
+	LFS                    bool   `json:"lfs"`
+	PersistCredentials     bool   `json:"persist_credentials"`
+	SetSafeDirectory       bool   `json:"set_safe_directory"`
+	SparseCheckout         string `json:"sparse_checkout"`
+	SparseCheckoutConeMode bool   `json:"sparse_checkout_cone_mode"`
 }
 
 func runCheckout() error {
@@ -83,8 +83,8 @@ func runCheckout() error {
 
 	// --- Set safe directory ---
 	if setSafeDirectory {
-		if out, err := exec.Command("git", "config", "--global", "--add", "safe.directory", targetDir).CombinedOutput(); err != nil {
-			return fmt.Errorf("git config safe.directory: %w\n%s", err, out)
+		if res, err := ac.Exec("git", "config", "--global", "--add", "safe.directory", targetDir); err != nil {
+			return fmt.Errorf("git config safe.directory: %w\n%s", err, res.Stderr)
 		}
 	}
 
@@ -94,8 +94,8 @@ func runCheckout() error {
 		encoded := base64.StdEncoding.EncodeToString([]byte("x-access-token:" + token))
 		headerVal := "AUTHORIZATION: basic " + encoded
 		configKey := fmt.Sprintf("http.%s/.extraheader", strings.TrimRight(serverURL, "/"))
-		if out, err := exec.Command("git", "config", "--global", configKey, headerVal).CombinedOutput(); err != nil {
-			return fmt.Errorf("configuring git credentials: %w\n%s", err, out)
+		if res, err := ac.Exec("git", "config", "--global", configKey, headerVal); err != nil {
+			return fmt.Errorf("configuring git credentials: %w\n%s", err, res.Stderr)
 		}
 		if !persistCredentials {
 			cleanupCredentials = func() {
@@ -106,8 +106,8 @@ func runCheckout() error {
 		encoded := base64.StdEncoding.EncodeToString([]byte("x-access-token:" + token))
 		headerVal := "AUTHORIZATION: basic " + encoded
 		configKey := fmt.Sprintf("http.%s/.extraheader", strings.TrimRight(serverURL, "/"))
-		if out, err := exec.Command("git", "config", "--global", configKey, headerVal).CombinedOutput(); err != nil {
-			return fmt.Errorf("configuring git credentials: %w\n%s", err, out)
+		if res, err := ac.Exec("git", "config", "--global", configKey, headerVal); err != nil {
+			return fmt.Errorf("configuring git credentials: %w\n%s", err, res.Stderr)
 		}
 		cleanupCredentials = func() {
 			exec.Command("git", "config", "--global", "--unset-all", configKey).Run() //nolint
@@ -150,23 +150,23 @@ func runCheckout() error {
 
 	// --- LFS ---
 	if lfs {
-		if out, err := runGitIn(targetDir, "lfs", "pull"); err != nil {
-			return fmt.Errorf("git lfs pull: %w\n%s", err, out)
+		if res, err := ac.Exec("git", "-C", targetDir, "lfs", "pull"); err != nil {
+			return fmt.Errorf("git lfs pull: %w\n%s", err, res.Stderr)
 		}
 	}
 
 	// --- Get commit SHA ---
-	commitOut, err := runGitIn(targetDir, "rev-parse", "HEAD")
+	commitRes, err := ac.Exec("git", "-C", targetDir, "rev-parse", "HEAD")
 	if err != nil {
-		return fmt.Errorf("git rev-parse HEAD: %w\n%s", err, commitOut)
+		return fmt.Errorf("git rev-parse HEAD: %w\n%s", err, commitRes.Stderr)
 	}
-	commitSHA := strings.TrimSpace(string(commitOut))
+	commitSHA := strings.TrimSpace(commitRes.Stdout)
 
 	// --- Resolve effective ref ---
 	effectiveRef := ref
-	abbrevOut, abbrevErr := runGitIn(targetDir, "rev-parse", "--abbrev-ref", "HEAD")
+	abbrevRes, abbrevErr := ac.Exec("git", "-C", targetDir, "rev-parse", "--abbrev-ref", "HEAD")
 	if abbrevErr == nil {
-		abbrev := strings.TrimSpace(string(abbrevOut))
+		abbrev := strings.TrimSpace(abbrevRes.Stdout)
 		if abbrev != "HEAD" {
 			effectiveRef = abbrev
 		}
@@ -187,22 +187,20 @@ func runCheckout() error {
 	}
 
 	// --- Job summary ---
-	ac.JobSummary.
-		AddHeading("Checkout", 2).
-		AddTable([][]ac.SummaryTableCell{
-			{
-				{Data: "Repository", Header: true},
-				{Data: "Ref", Header: true},
-				{Data: "Commit", Header: true},
-				{Data: "Path", Header: true},
-			},
-			{
-				{Data: repository},
-				{Data: effectiveRef},
-				{Data: commitSHA},
-				{Data: targetDir},
-			},
-		})
+	ac.JobSummary.AddHeading("Checkout", 2).AddTable([][]ac.SummaryTableCell{
+		{
+			{Data: "Repository", Header: true},
+			{Data: "Ref", Header: true},
+			{Data: "Commit", Header: true},
+			{Data: "Path", Header: true},
+		},
+		{
+			{Data: repository},
+			{Data: effectiveRef},
+			{Data: commitSHA},
+			{Data: targetDir},
+		},
+	})
 	if err := ac.JobSummary.Write(nil); err != nil {
 		ac.Warning(fmt.Sprintf("could not write job summary: %v", err), nil)
 	}
@@ -214,13 +212,6 @@ func runCheckout() error {
 func isGitRepo(dir string) bool {
 	info, err := os.Stat(filepath.Join(dir, ".git"))
 	return err == nil && info != nil
-}
-
-// runGitIn runs a git command inside dir and returns combined output.
-func runGitIn(dir string, args ...string) (string, error) {
-	cmd := exec.Command("git", append([]string{"-C", dir}, args...)...)
-	out, err := cmd.CombinedOutput()
-	return string(out), err
 }
 
 // cloneRepo performs a fresh git clone.
@@ -241,9 +232,9 @@ func cloneRepo(cloneURL, targetDir, ref, fetchDepth string, fetchTags bool, spar
 	}
 	args = append(args, cloneURL, targetDir)
 
-	out, err := exec.Command("git", args...).CombinedOutput()
+	res, err := ac.Exec("git", args...)
 	if err != nil {
-		return fmt.Errorf("git clone: %w\n%s", err, out)
+		return fmt.Errorf("git clone: %w\n%s", err, res.Stderr)
 	}
 
 	if sparseCheckout != "" {
@@ -254,8 +245,8 @@ func cloneRepo(cloneURL, targetDir, ref, fetchDepth string, fetchTags bool, spar
 		if checkoutRef == "" {
 			checkoutRef = "HEAD"
 		}
-		if out, err := runGitIn(targetDir, "checkout", checkoutRef); err != nil {
-			return fmt.Errorf("git checkout after sparse init: %w\n%s", err, out)
+		if res, err := ac.Exec("git", "-C", targetDir, "checkout", checkoutRef); err != nil {
+			return fmt.Errorf("git checkout after sparse init: %w\n%s", err, res.Stderr)
 		}
 	}
 
@@ -265,18 +256,18 @@ func cloneRepo(cloneURL, targetDir, ref, fetchDepth string, fetchTags bool, spar
 // fetchRepo fetches into an existing git repository.
 func fetchRepo(targetDir, cloneURL, ref, fetchDepth string, fetchTags, clean bool) error {
 	if clean {
-		if out, err := runGitIn(targetDir, "clean", "-ffdx"); err != nil {
-			return fmt.Errorf("git clean: %w\n%s", err, out)
+		if res, err := ac.Exec("git", "-C", targetDir, "clean", "-ffdx"); err != nil {
+			return fmt.Errorf("git clean: %w\n%s", err, res.Stderr)
 		}
-		if out, err := runGitIn(targetDir, "reset", "--hard"); err != nil {
-			return fmt.Errorf("git reset: %w\n%s", err, out)
+		if res, err := ac.Exec("git", "-C", targetDir, "reset", "--hard"); err != nil {
+			return fmt.Errorf("git reset: %w\n%s", err, res.Stderr)
 		}
 	}
 
 	// Ensure origin points to the right URL.
-	runGitIn(targetDir, "remote", "set-url", "origin", cloneURL) //nolint
+	ac.Exec("git", "-C", targetDir, "remote", "set-url", "origin", cloneURL) //nolint
 
-	fetchArgs := []string{"fetch"}
+	fetchArgs := []string{"-C", targetDir, "fetch"}
 	if fetchDepth != "0" && fetchDepth != "" {
 		fetchArgs = append(fetchArgs, "--depth", fetchDepth)
 	}
@@ -288,20 +279,20 @@ func fetchRepo(targetDir, cloneURL, ref, fetchDepth string, fetchTags, clean boo
 		fetchArgs = append(fetchArgs, ref)
 	}
 
-	if out, err := runGitIn(targetDir, fetchArgs...); err != nil {
-		return fmt.Errorf("git fetch: %w\n%s", err, out)
+	if res, err := ac.Exec("git", fetchArgs...); err != nil {
+		return fmt.Errorf("git fetch: %w\n%s", err, res.Stderr)
 	}
 
 	checkoutTarget := "FETCH_HEAD"
 	if ref != "" {
 		checkoutTarget = ref
 	}
-	if out, err := runGitIn(targetDir, "checkout", checkoutTarget); err != nil {
+	if res, err := ac.Exec("git", "-C", targetDir, "checkout", checkoutTarget); err != nil {
 		// Try FETCH_HEAD as fallback.
-		if out2, err2 := runGitIn(targetDir, "checkout", "FETCH_HEAD"); err2 != nil {
-			return fmt.Errorf("git checkout %s: %w\n%s", checkoutTarget, err, out)
+		if res2, err2 := ac.Exec("git", "-C", targetDir, "checkout", "FETCH_HEAD"); err2 != nil {
+			return fmt.Errorf("git checkout %s: %w\n%s", checkoutTarget, err, res.Stderr)
 		} else {
-			_ = out2
+			_ = res2
 		}
 	}
 
@@ -310,14 +301,14 @@ func fetchRepo(targetDir, cloneURL, ref, fetchDepth string, fetchTags, clean boo
 
 // configureSparseCheckout enables sparse checkout and writes patterns.
 func configureSparseCheckout(targetDir, patterns string, coneMode bool) error {
-	initArgs := []string{"sparse-checkout", "init"}
+	initArgs := []string{"-C", targetDir, "sparse-checkout", "init"}
 	if coneMode {
 		initArgs = append(initArgs, "--cone")
 	} else {
 		initArgs = append(initArgs, "--no-cone")
 	}
-	if out, err := runGitIn(targetDir, initArgs...); err != nil {
-		return fmt.Errorf("git sparse-checkout init: %w\n%s", err, out)
+	if res, err := ac.Exec("git", initArgs...); err != nil {
+		return fmt.Errorf("git sparse-checkout init: %w\n%s", err, res.Stderr)
 	}
 
 	var patternList []string
@@ -328,9 +319,9 @@ func configureSparseCheckout(targetDir, patterns string, coneMode bool) error {
 		}
 	}
 
-	setArgs := append([]string{"sparse-checkout", "set"}, patternList...)
-	if out, err := runGitIn(targetDir, setArgs...); err != nil {
-		return fmt.Errorf("git sparse-checkout set: %w\n%s", err, out)
+	setArgs := append([]string{"-C", targetDir, "sparse-checkout", "set"}, patternList...)
+	if res, err := ac.Exec("git", setArgs...); err != nil {
+		return fmt.Errorf("git sparse-checkout set: %w\n%s", err, res.Stderr)
 	}
 
 	return nil
@@ -342,25 +333,25 @@ func handleSubmodules(targetDir, submodules string, lfs bool) error {
 	case "false", "":
 		return nil
 	case "recursive":
-		if out, err := runGitIn(targetDir, "submodule", "sync", "--recursive"); err != nil {
-			return fmt.Errorf("git submodule sync --recursive: %w\n%s", err, out)
+		if res, err := ac.Exec("git", "-C", targetDir, "submodule", "sync", "--recursive"); err != nil {
+			return fmt.Errorf("git submodule sync --recursive: %w\n%s", err, res.Stderr)
 		}
-		if out, err := runGitIn(targetDir, "submodule", "update", "--init", "--recursive"); err != nil {
-			return fmt.Errorf("git submodule update --init --recursive: %w\n%s", err, out)
+		if res, err := ac.Exec("git", "-C", targetDir, "submodule", "update", "--init", "--recursive"); err != nil {
+			return fmt.Errorf("git submodule update --init --recursive: %w\n%s", err, res.Stderr)
 		}
 	default: // "true" or any non-false value
-		if out, err := runGitIn(targetDir, "submodule", "sync"); err != nil {
-			return fmt.Errorf("git submodule sync: %w\n%s", err, out)
+		if res, err := ac.Exec("git", "-C", targetDir, "submodule", "sync"); err != nil {
+			return fmt.Errorf("git submodule sync: %w\n%s", err, res.Stderr)
 		}
-		if out, err := runGitIn(targetDir, "submodule", "update", "--init"); err != nil {
-			return fmt.Errorf("git submodule update --init: %w\n%s", err, out)
+		if res, err := ac.Exec("git", "-C", targetDir, "submodule", "update", "--init"); err != nil {
+			return fmt.Errorf("git submodule update --init: %w\n%s", err, res.Stderr)
 		}
 	}
 
 	if lfs {
 		// Run lfs pull in each submodule.
-		if out, err := runGitIn(targetDir, "submodule", "foreach", "--recursive", "git lfs pull"); err != nil {
-			return fmt.Errorf("git lfs pull in submodules: %w\n%s", err, out)
+		if res, err := ac.Exec("git", "-C", targetDir, "submodule", "foreach", "--recursive", "git lfs pull"); err != nil {
+			return fmt.Errorf("git lfs pull in submodules: %w\n%s", err, res.Stderr)
 		}
 	}
 

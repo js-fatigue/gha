@@ -17,8 +17,6 @@ import (
 	"strings"
 )
 
-const azureBlockSize = 64 * 1024 * 1024 // 64 MB
-
 // CacheInput is the JSON payload for the `input` field when running a cache command.
 type CacheInput struct {
 	Action      string   `json:"action"`       // "restore" or "save"
@@ -120,12 +118,10 @@ func RestoreCache(inp CacheInput) error {
 		if inp.FailOnMiss {
 			return fmt.Errorf("cache miss for key %q", inp.Key)
 		}
-		JobSummary.
-			AddHeading("Cache Restore", 2).
-			AddTable([][]SummaryTableCell{
-				{{Data: "Key", Header: true}, {Data: "Result", Header: true}},
-				{{Data: inp.Key}, {Data: "miss"}},
-			})
+		JobSummary.AddHeading("Cache Restore", 2).AddTable([][]SummaryTableCell{
+			{{Data: "Key", Header: true}, {Data: "Result", Header: true}},
+			{{Data: inp.Key}, {Data: "miss"}},
+		})
 		if err := JobSummary.Write(nil); err != nil {
 			Warning(fmt.Sprintf("could not write job summary: %v", err), nil)
 		}
@@ -151,12 +147,10 @@ func RestoreCache(inp CacheInput) error {
 		Warning(fmt.Sprintf("could not set cache_hit: %v", err), nil)
 	}
 
-	JobSummary.
-		AddHeading("Cache Restore", 2).
-		AddTable([][]SummaryTableCell{
-			{{Data: "Key", Header: true}, {Data: "Matched", Header: true}, {Data: "Result", Header: true}},
-			{{Data: inp.Key}, {Data: cacheResp.MatchedKey}, {Data: "✅ hit"}},
-		})
+	JobSummary.AddHeading("Cache Restore", 2).AddTable([][]SummaryTableCell{
+		{{Data: "Key", Header: true}, {Data: "Matched", Header: true}, {Data: "Result", Header: true}},
+		{{Data: inp.Key}, {Data: cacheResp.MatchedKey}, {Data: "✅ hit"}},
+	})
 	if err := JobSummary.Write(nil); err != nil {
 		Warning(fmt.Sprintf("could not write job summary: %v", err), nil)
 	}
@@ -216,7 +210,7 @@ func SaveCache(inp CacheInput) error {
 	}
 
 	// Upload to Azure Block Blob.
-	if err := putAzureBlockBlob(createResp.SignedUploadURL, archivePath, archiveSize); err != nil {
+	if err := putAzureBlockBlob(createResp.SignedUploadURL, archivePath); err != nil {
 		return fmt.Errorf("uploading cache archive: %w", err)
 	}
 
@@ -249,12 +243,10 @@ func SaveCache(inp CacheInput) error {
 
 	Info(fmt.Sprintf("cache: saved %q", inp.Key))
 
-	JobSummary.
-		AddHeading("Cache Save", 2).
-		AddTable([][]SummaryTableCell{
-			{{Data: "Key", Header: true}, {Data: "Size", Header: true}, {Data: "Result", Header: true}},
-			{{Data: inp.Key}, {Data: fmt.Sprintf("%d bytes", archiveSize)}, {Data: "✅ saved"}},
-		})
+	JobSummary.AddHeading("Cache Save", 2).AddTable([][]SummaryTableCell{
+		{{Data: "Key", Header: true}, {Data: "Size", Header: true}, {Data: "Result", Header: true}},
+		{{Data: inp.Key}, {Data: fmt.Sprintf("%d bytes", archiveSize)}, {Data: "✅ saved"}},
+	})
 	if err := JobSummary.Write(nil); err != nil {
 		Warning(fmt.Sprintf("could not write job summary: %v", err), nil)
 	}
@@ -366,9 +358,11 @@ func cacheAPIRequest(method, rawURL, token string, body []byte, contentType stri
 	return http.DefaultClient.Do(req)
 }
 
+const azureBlockSize = 64 * 1024 * 1024 // 64 MB
+
 // putAzureBlockBlob uploads archivePath to an Azure Block Blob SAS URL using
 // 64 MB blocks, matching the @actions/cache v4 upload strategy.
-func putAzureBlockBlob(uploadURL, archivePath string, size int64) error {
+func putAzureBlockBlob(uploadURL, archivePath string) error {
 	f, err := os.Open(archivePath)
 	if err != nil {
 		return fmt.Errorf("opening archive: %w", err)
@@ -384,7 +378,7 @@ func putAzureBlockBlob(uploadURL, archivePath string, size int64) error {
 			break
 		}
 
-		blockID := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%05d", i)))
+		blockID := base64.StdEncoding.EncodeToString(fmt.Appendf([]byte{}, "%05d", i))
 		blockIDs = append(blockIDs, blockID)
 
 		blockURL := fmt.Sprintf("%s&comp=block&blockid=%s", uploadURL, url.QueryEscape(blockID))

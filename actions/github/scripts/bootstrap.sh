@@ -1,8 +1,10 @@
 #!/bin/bash
 # bootstrap.sh — downloads the github binary from GitHub Releases,
-# caches it in $RUNNER_TEMP, and exec's it with all arguments forwarded.
+# caches it in $RUNNER_TEMP, and exec's it with the command argument.
 
 set -euo pipefail
+
+COMMAND="${1:?usage: bootstrap.sh <command>}"
 
 REPO="bshore/gha"
 BINARY_NAME="github"
@@ -26,7 +28,7 @@ BINARY_PATH="${CACHE_DIR}/${RELEASE_TAG}/${BINARY_NAME}"
 # Serve from filesystem cache if available
 if [[ -x "$BINARY_PATH" ]]; then
   echo "github: using cached binary at ${BINARY_PATH}"
-  exec "$BINARY_PATH" "$@"
+  exec "$BINARY_PATH" "$COMMAND"
 fi
 
 # Try Actions cache restore
@@ -45,7 +47,7 @@ if [[ -n "${ACTIONS_RESULTS_URL:-}" && -n "${ACTIONS_RUNTIME_TOKEN:-}" ]]; then
     echo "github: cache hit — restoring binary"
     mkdir -p "$(dirname "$BINARY_PATH")"
     if curl -sL "$ARCHIVE_URL" | tar -xz -C / 2>/dev/null && [[ -x "$BINARY_PATH" ]]; then
-      exec "$BINARY_PATH" "$@"
+      exec "$BINARY_PATH" "$COMMAND"
     fi
     echo "github: cache restore failed, falling back to download"
   fi
@@ -84,4 +86,4 @@ echo "github: checksum OK"
 
 chmod +x "$BINARY_PATH"
 
-exec "$BINARY_PATH" "$@"
+exec "$BINARY_PATH" "$COMMAND"
