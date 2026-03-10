@@ -10,7 +10,6 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -180,22 +179,20 @@ func runSetup() error {
 		ac.Warning(fmt.Sprintf("could not set go_version output: %v", err), nil)
 	}
 
-	ac.JobSummary.
-		AddHeading("Go Setup", 2).
-		AddTable([][]ac.SummaryTableCell{
-			{
-				{Data: "Version", Header: true},
-				{Data: "GOROOT", Header: true},
-				{Data: "GOPATH", Header: true},
-				{Data: "Result", Header: true},
-			},
-			{
-				{Data: version},
-				{Data: goroot},
-				{Data: gopath},
-				{Data: "✅ success"},
-			},
-		})
+	ac.JobSummary.AddHeading("Go Setup", 2).AddTable([][]ac.SummaryTableCell{
+		{
+			{Data: "Version", Header: true},
+			{Data: "GOROOT", Header: true},
+			{Data: "GOPATH", Header: true},
+			{Data: "Result", Header: true},
+		},
+		{
+			{Data: version},
+			{Data: goroot},
+			{Data: gopath},
+			{Data: "✅ success"},
+		},
+	})
 	if err := ac.JobSummary.Write(nil); err != nil {
 		ac.Warning(fmt.Sprintf("could not write job summary: %v", err), nil)
 	}
@@ -436,9 +433,9 @@ func downloadAndInstall(version string, file goFile, goroot string) error {
 	}
 
 	ac.Info(fmt.Sprintf("Extracting to %s", goroot))
-	out, err := exec.Command("tar", "-xzf", tmpName, "--strip-components=1", "-C", goroot).CombinedOutput()
+	res, err := ac.Exec("tar", "-xzf", tmpName, "--strip-components=1", "-C", goroot)
 	if err != nil {
-		return fmt.Errorf("extracting archive: %w\n%s", err, out)
+		return fmt.Errorf("extracting archive: %w\n%s", err, res.Stderr)
 	}
 
 	return nil

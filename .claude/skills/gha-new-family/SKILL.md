@@ -131,7 +131,7 @@ func run<Command>() error {
 ## `action.yml`
 
 Key rules:
-- `command` is passed as a CLI arg through `bootstrap.sh` (which execs the binary with `"$@"`), not an env var.
+- `command` is passed as a CLI arg through `bootstrap.sh` (which execs the binary with the single `$COMMAND` arg), not an env var.
 - Every family-specific input **must** be forwarded in the `run` step `env:` block as `INPUT_<NAME>`.
 - Input names **must use underscores** (not hyphens) — `ac.GetInput` only replaces spaces→underscores.
 - Version env var: `GHA_<FAMILY>_VERSION` (uppercased family name). The `version` step detects the tag from the action path (`basename "$(dirname "$(dirname "${{ github.action_path }}")")"`) — no `gh` CLI call needed.
@@ -207,9 +207,17 @@ runs:
 
 Change three variables: `BINARY_NAME`, `CACHE_DIR`, `RELEASE_TAG` env var name.
 
+The script accepts exactly one argument (the command name). `COMMAND` is extracted from `$1`
+with `${1:?...}` so the script fails immediately with a clear message if the arg is missing.
+All `exec` calls forward only `"$COMMAND"` — never `"$@"` — to enforce the single-argument contract.
+
 ```bash
 #!/bin/bash
+# bootstrap.sh — downloads the <family> binary from GitHub Releases,
+# caches it in $RUNNER_TEMP, and exec's it with the command argument.
 set -euo pipefail
+
+COMMAND="${1:?usage: bootstrap.sh <command>}"
 
 REPO="bshore/gha"
 BINARY_NAME="<family>"
@@ -227,7 +235,7 @@ BINARY_PATH="${CACHE_DIR}/${RELEASE_TAG}/${BINARY_NAME}"
 
 if [[ -x "$BINARY_PATH" ]]; then
   echo "<family>: using cached binary at ${BINARY_PATH}"
-  exec "$BINARY_PATH" "$@"
+  exec "$BINARY_PATH" "$COMMAND"
 fi
 
 mkdir -p "$(dirname "$BINARY_PATH")"
@@ -265,7 +273,7 @@ fi
 echo "<family>: checksum OK"
 
 chmod +x "$BINARY_PATH"
-exec "$BINARY_PATH" "$@"
+exec "$BINARY_PATH" "$COMMAND"
 ```
 
 ---

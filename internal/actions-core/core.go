@@ -228,6 +228,25 @@ func GetBooleanInputOrDefault(name string, defaultVal bool, opts *InputOptions) 
 	return GetBooleanInput(name, opts)
 }
 
+// GetBooleanInput reads a boolean action input using YAML 1.2 rules.
+// Accepted true values: "true", "True", "TRUE".
+// Accepted false values: "false", "False", "FALSE".
+// All other values return an error.
+func GetBooleanInput(name string, opts *InputOptions) (bool, error) {
+	val, err := GetInput(name, opts)
+	if err != nil {
+		return false, err
+	}
+	switch val {
+	case "true", "True", "TRUE":
+		return true, nil
+	case "false", "False", "FALSE":
+		return false, nil
+	default:
+		return false, fmt.Errorf("input %q is not a boolean value: %q", name, val)
+	}
+}
+
 // GetStructuredInput reads the named input and unmarshals it into out.
 // Format is auto-detected: if the trimmed value starts with '{' it is parsed
 // as JSON, otherwise as HCL native syntax (tfvars-style key = value).
@@ -317,25 +336,6 @@ func ctyToGo(val cty.Value) (any, error) {
 		return m, nil
 	}
 	return nil, fmt.Errorf("unsupported type: %s", ty.FriendlyName())
-}
-
-// GetBooleanInput reads a boolean action input using YAML 1.2 rules.
-// Accepted true values: "true", "True", "TRUE".
-// Accepted false values: "false", "False", "FALSE".
-// All other values return an error.
-func GetBooleanInput(name string, opts *InputOptions) (bool, error) {
-	val, err := GetInput(name, opts)
-	if err != nil {
-		return false, err
-	}
-	switch val {
-	case "true", "True", "TRUE":
-		return true, nil
-	case "false", "False", "FALSE":
-		return false, nil
-	default:
-		return false, fmt.Errorf("input %q is not a boolean value: %q", name, val)
-	}
 }
 
 // --- Outputs ---

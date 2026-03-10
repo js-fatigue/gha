@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path"
-	"sort"
+	"slices"
 	"strings"
 
 	ac "github.com/bshore/gha/internal/actions-core"
@@ -14,8 +14,8 @@ import (
 type ChangedDirsInput struct {
 	Base     string   `json:"base"`
 	MaxDepth int      `json:"max_depth"`
-	Include  []string `json:"include"` // keep only dirs with these prefixes (empty = keep all)
-	Exclude  []string `json:"exclude"` // drop dirs matching exactly (empty = drop none)
+	Include  []string `json:"include"`
+	Exclude  []string `json:"exclude"`
 }
 
 func init() { Register("changed-dirs", runChangedDirs) }
@@ -27,7 +27,7 @@ func defaultBase() string {
 	out, err := exec.Command("git", "symbolic-ref", "refs/remotes/origin/HEAD").Output()
 	if err == nil {
 		ref := strings.TrimSpace(string(out))
-		if b := strings.TrimPrefix(ref, "refs/remotes/origin/"); b != ref {
+		if b, ok := strings.CutPrefix(ref, "refs/remotes/origin/"); ok {
 			return b
 		}
 	}
@@ -62,10 +62,10 @@ func runChangedDirs() error {
 
 	// Get changed files via three-dot diff (compares merge base to HEAD,
 	// so diverged branches still produce the correct feature-branch diff).
-	out, err := exec.Command("git", "diff", "--name-only", resolvedBase+"...HEAD").Output()
+	res, err := ac.Exec("git", "diff", "--name-only", resolvedBase+"...HEAD")
 	if err != nil {
-		if ee, ok := err.(*exec.ExitError); ok && len(ee.Stderr) > 0 {
-			return fmt.Errorf("git diff %s...HEAD: %w\n%s", resolvedBase, err, strings.TrimSpace(string(ee.Stderr)))
+		if res.Stderr != "" {
+			return fmt.Errorf("git diff %s...HEAD: %w\n%s", resolvedBase, err, strings.TrimSpace(res.Stderr))
 		}
 		return fmt.Errorf("git diff %s...HEAD: %w", resolvedBase, err)
 	}
@@ -78,7 +78,7 @@ func runChangedDirs() error {
 
 	// Parse output into unique top-level directories.
 	dirSet := make(map[string]struct{})
-	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+	for line := range strings.SplitSeq(res.Stdout, "\n") {
 		if line != "" {
 			dirSet[capDir(path.Dir(line), maxDepth)] = struct{}{}
 		}
@@ -87,7 +87,6 @@ func runChangedDirs() error {
 	for d := range dirSet {
 		dirs = append(dirs, d)
 	}
-	sort.Strings(dirs)
 	dirs = filterDirs(dirs, inp.Include, inp.Exclude)
 	dirNamesJSON, _ := json.Marshal(dirs)
 
@@ -107,19 +106,16 @@ func runChangedDirs() error {
 		statusEmoji = "➖"
 	}
 
-	ac.JobSummary.
-		AddHeading("Changed Directories", 2).
-		AddTable([][]ac.SummaryTableCell{
-			{
-				{Data: "Base", Header: true},
-				{Data: "Status", Header: true},
-			},
-			{
-				{Data: base},
-				{Data: statusEmoji + " " + status},
-			},
-		}).
-		AddSeparator()
+	ac.JobSummary.AddHeading("Changed Directories", 2).AddTable([][]ac.SummaryTableCell{
+		{
+			{Data: "Base", Header: true},
+			{Data: "Status", Header: true},
+		},
+		{
+			{Data: base},
+			{Data: statusEmoji + " " + status},
+		},
+	}).AddSeparator()
 
 	if len(dirs) > 0 {
 		ac.JobSummary.AddList(dirs, false)
@@ -141,26 +137,12 @@ func runChangedDirs() error {
 func filterDirs(dirs, include, exclude []string) []string {
 	out := dirs[:0:0]
 	for _, d := range dirs {
-		if len(include) > 0 {
-			matched := false
-			for _, pfx := range include {
-				if strings.HasPrefix(d, pfx) {
-					matched = true
-					break
-				}
-			}
-			if !matched {
-				continue
-			}
+		if len(include) > 0 && !slices.ContainsFunc(include, func(pfx string) bool {
+			return strings.HasPrefix(d, pfx)
+		}) {
+			continue
 		}
-		excluded := false
-		for _, ex := range exclude {
-			if d == ex {
-				excluded = true
-				break
-			}
-		}
-		if !excluded {
+		if !slices.Contains(exclude, d) {
 			out = append(out, d)
 		}
 	}

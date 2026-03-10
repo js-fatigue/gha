@@ -52,12 +52,10 @@ func run<Command>() error {
     }
 
     // Write job summary
-    ac.JobSummary.
-        AddHeading("<Command>", 2).
-        AddTable([][]ac.SummaryTableCell{
-            {{Data: "Input", Header: true}, {Data: "Result", Header: true}},
-            {{Data: inp.MyString}, {Data: "✅ success"}},
-        })
+    ac.JobSummary.AddHeading("<Command>", 2).AddTable([][]ac.SummaryTableCell{
+        {{Data: "Input", Header: true}, {Data: "Result", Header: true}},
+        {{Data: inp.MyString}, {Data: "✅ success"}},
+    })
     if err := ac.JobSummary.Write(nil); err != nil {
         ac.Warning(fmt.Sprintf("could not write job summary: %v", err), nil)
     }
@@ -171,20 +169,10 @@ if err := ac.SetOutput("output_name", value); err != nil {
 ## 4. Job summary pattern
 
 ```go
-ac.JobSummary.
-    AddHeading("Title", 2).
-    AddTable([][]ac.SummaryTableCell{
-        {
-            {Data: "Col1", Header: true},
-            {Data: "Col2", Header: true},
-        },
-        {
-            {Data: val1},
-            {Data: val2},
-        },
-    }).
-    AddSeparator().
-    AddList(items, false)  // false = unordered list
+ac.JobSummary.AddHeading("Title", 2).AddTable([][]ac.SummaryTableCell{
+    {{Data: "Col1", Header: true}, {Data: "Col2", Header: true}},
+    {{Data: val1}, {Data: val2}},
+}).AddSeparator().AddList(items, false)  // false = unordered list
 if err := ac.JobSummary.Write(nil); err != nil {
     ac.Warning(fmt.Sprintf("could not write job summary: %v", err), nil)
 }
