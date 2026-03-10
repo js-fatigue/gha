@@ -33,9 +33,7 @@ func main() {
 		ac.DeletePRComment(ctx, prCommentMarker)
 	}
 
-	if command != "cache" {
-		ac.SelfCacheBinary()
-	}
+	ac.SelfCacheBinary()
 }
 
 func buildErrorCommentBody(command string, cmdErr error) string {
