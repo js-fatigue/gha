@@ -1,3 +1,4 @@
+# no-op to force build
 FROM busybox:musl
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
