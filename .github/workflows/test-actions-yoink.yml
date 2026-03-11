@@ -16,7 +16,7 @@ jobs:
   test-docker-build:
     runs-on: ubuntu-latest
     steps:
-      - uses: bshore/gha/actions/github@github-v0.8.0
+      - uses: js-fatigue/gha/actions/github@github-v0.8.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
@@ -30,6 +30,6 @@ jobs:
       - name: Test build
         run: |
           SHORT_SHA="${GITHUB_SHA::7}"
-          docker build -t ghcr.io/bshore/gha-yoink:latest \
-                       -t ghcr.io/bshore/gha-yoink:sha-${SHORT_SHA} \
+          docker build -t ghcr.io/js-fatigue/gha-yoink:latest \
+                       -t ghcr.io/js-fatigue/gha-yoink:sha-${SHORT_SHA} \
                        images/yoink
