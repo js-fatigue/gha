@@ -16,4 +16,4 @@ outputs:
 
 runs:
   using: docker
-  image: docker://ghcr.io/bshore/gha-yoink:sha-0513e35
+  image: docker://ghcr.io/js-fatigue/gha-yoink:sha-21afa2c

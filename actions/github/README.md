@@ -107,7 +107,7 @@ jobs:
   check-title:
     runs-on: ubuntu-latest
     steps:
-      - uses: bshore/gha/actions/github@github-v0.4.1
+      - uses: js-fatigue/gha/actions/github@github-v0.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: check-pr-title
@@ -124,14 +124,14 @@ jobs:
     outputs:
       dirs: ${{ steps.changed.outputs.dir_names }}
     steps:
-      - uses: bshore/gha/actions/github@github-v0.4.1
+      - uses: js-fatigue/gha/actions/github@github-v0.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
           input: '{"fetch_depth": 0}'
 
       - id: changed
-        uses: bshore/gha/actions/github@github-v0.4.1
+        uses: js-fatigue/gha/actions/github@github-v0.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: changed-dirs
@@ -167,13 +167,13 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: bshore/gha/actions/github@github-v0.4.1
+      - uses: js-fatigue/gha/actions/github@github-v0.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
           input: '{"fetch_depth": 0}'
 
-      - uses: bshore/gha/actions/github@github-v0.4.1
+      - uses: js-fatigue/gha/actions/github@github-v0.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: release
@@ -194,13 +194,13 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: bshore/gha/actions/github@github-v0.4.1
+      - uses: js-fatigue/gha/actions/github@github-v0.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
           input: '{"fetch_depth": 0}'
 
-      - uses: bshore/gha/actions/github@github-v0.4.1
+      - uses: js-fatigue/gha/actions/github@github-v0.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: release
@@ -218,7 +218,7 @@ jobs:
   example:
     runs-on: ubuntu-latest
     steps:
-      - uses: bshore/gha/actions/github@github-v0.4.1
+      - uses: js-fatigue/gha/actions/github@github-v0.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: cache
@@ -232,7 +232,7 @@ jobs:
 **Save:**
 
 ```yaml
-      - uses: bshore/gha/actions/github@github-v0.4.1
+      - uses: js-fatigue/gha/actions/github@github-v0.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: cache
@@ -251,7 +251,7 @@ jobs:
   example:
     runs-on: ubuntu-latest
     steps:
-      - uses: bshore/gha/actions/github@github-v0.4.1
+      - uses: js-fatigue/gha/actions/github@github-v0.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout

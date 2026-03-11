@@ -31,8 +31,8 @@ import (
     "os"
     "strings"
 
-    "github.com/bshore/gha/actions/<family>/cmd"
-    ac "github.com/bshore/gha/internal/actions-core"
+    "github.com/js-fatigue/gha/actions/<family>/cmd"
+    ac "github.com/js-fatigue/gha/internal/actions-core"
 )
 
 const prCommentMarker = "<!-- <family>-error -->"
@@ -115,7 +115,7 @@ See the `gha-new-command` skill for the full command template.
 package cmd
 
 import (
-    ac "github.com/bshore/gha/internal/actions-core"
+    ac "github.com/js-fatigue/gha/internal/actions-core"
 )
 
 func init() { Register("<command-name>", run<Command>) }
@@ -183,7 +183,7 @@ runs:
         echo "tag=${v}" >> "$GITHUB_OUTPUT"
 
     - id: yoink
-      uses: bshore/gha/actions/yoink@main
+      uses: js-fatigue/gha/actions/yoink@main
 
     - id: run
       shell: bash
@@ -219,7 +219,7 @@ set -euo pipefail
 
 COMMAND="${1:?usage: bootstrap.sh <command>}"
 
-REPO="bshore/gha"
+REPO="js-fatigue/gha"
 BINARY_NAME="<family>"
 CACHE_DIR="${RUNNER_TEMP:-/tmp}/actions/<family>"
 
@@ -324,7 +324,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: bshore/gha/actions/github@github-v0.7.0
+        uses: js-fatigue/gha/actions/github@github-v0.7.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout

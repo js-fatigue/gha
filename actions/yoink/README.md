@@ -22,7 +22,7 @@ Yoink is used internally by `actions/github` and `actions/go`. The pattern:
 ```yaml
 steps:
   - id: yoink
-    uses: bshore/gha/actions/yoink@main
+    uses: js-fatigue/gha/actions/yoink@main
 
   - name: Some action
     uses: some-action@foo-v1.2.3
@@ -37,4 +37,4 @@ steps:
 
 ## Deployment
 
-The image (`ghcr.io/bshore/gha-yoink`) is rebuilt by `deploy-yoink.yml` on every push to `main` that touches `images/yoink/`, tagged as both `:latest` and `:sha-<7char>`. The SHA is pinned in `action.yml`. Update it after pushing a new image.
+The image (`ghcr.io/js-fatigue/gha-yoink`) is rebuilt by `deploy-yoink.yml` on every push to `main` that touches `images/yoink/`, tagged as both `:latest` and `:sha-<7char>`. The SHA is pinned in `action.yml`. Update it after pushing a new image.

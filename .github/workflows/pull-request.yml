@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check PR title
-        uses: bshore/gha/actions/github@github-v0.8.0
+        uses: js-fatigue/gha/actions/github@github-v0.8.0
         with:
           command: check-pr-title
 
@@ -22,7 +22,7 @@ jobs:
     outputs:
       dir_names: ${{ steps.changed-dirs.outputs.dir_names }}
     steps:
-      - uses: bshore/gha/actions/github@github-v0.8.0
+      - uses: js-fatigue/gha/actions/github@github-v0.8.0
         with:
           command: checkout
           input: |
@@ -31,7 +31,7 @@ jobs:
 
       - name: Detect changed directories
         id: changed-dirs
-        uses: bshore/gha/actions/github@github-v0.8.0
+        uses: js-fatigue/gha/actions/github@github-v0.8.0
         with:
           command: changed-dirs
           input: |
@@ -48,14 +48,14 @@ jobs:
         dir: ${{ fromJson(needs.changed-dirs.outputs.dir_names) }}
     runs-on: ubuntu-latest
     steps:
-      - uses: bshore/gha/actions/github@github-v0.8.0
+      - uses: js-fatigue/gha/actions/github@github-v0.8.0
         with:
           command: checkout
           input: |
             ref = "${{ github.head_ref }}"
 
       - name: Release (dry run)
-        uses: bshore/gha/actions/github@github-v0.8.0
+        uses: js-fatigue/gha/actions/github@github-v0.8.0
         with:
           command: release
           input: |
