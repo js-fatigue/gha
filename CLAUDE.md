@@ -35,7 +35,7 @@ gofmt -w .
 
 ### Shared Core Library — `internal/actions-core/` (package `ac`)
 
-A Go port of the TypeScript `@actions/core` and `@actions/github` packages. Imported as `ac "github.com/bshore/gha/internal/actions-core"`.
+A Go port of the TypeScript `@actions/core` and `@actions/github` packages. Imported as `ac "github.com/js-fatigue/gha/internal/actions-core"`.
 
 | File | Purpose |
 |------|---------|
@@ -202,7 +202,7 @@ Project-level skills live in `.claude/skills/` and are invoked via the Skill too
 ## Module
 
 ```
-module github.com/bshore/gha
+module github.com/js-fatigue/gha
 go 1.23.4
 ```
 

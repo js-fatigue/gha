@@ -76,13 +76,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: bshore/gha/actions/github@github-v0.4.1
+      - uses: js-fatigue/gha/actions/github@github-v0.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
 
       # go.mod is auto-detected; input can be omitted entirely
-      - uses: bshore/gha/actions/go@go-v0.4.1
+      - uses: js-fatigue/gha/actions/go@go-v0.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: setup
@@ -91,7 +91,7 @@ jobs:
 To pin options explicitly:
 
 ```yaml
-      - uses: bshore/gha/actions/go@go-v0.4.1
+      - uses: js-fatigue/gha/actions/go@go-v0.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: setup
@@ -107,19 +107,19 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: bshore/gha/actions/github@github-v0.4.1
+      - uses: js-fatigue/gha/actions/github@github-v0.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout
 
-      - uses: bshore/gha/actions/go@go-v0.4.1
+      - uses: js-fatigue/gha/actions/go@go-v0.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: setup
           input: '{"go_version_file": "go.mod"}'
 
       - id: build
-        uses: bshore/gha/actions/go@go-v0.4.1
+        uses: js-fatigue/gha/actions/go@go-v0.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: build

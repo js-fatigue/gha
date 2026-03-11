@@ -16,13 +16,12 @@ jobs:
   build-push:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      # - uses: js-fatigue/gha/actions/github@github-v0.8.0
-      #   with:
-      #     token: ${{ secrets.GITHUB_TOKEN }}
-      #     command: checkout
-      #     input: |
-      #       ref = "${{ github.ref_name }}"
+      - uses: js-fatigue/gha/actions/github@github-v0.8.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: checkout
+          input: |
+            ref = "${{ github.ref_name }}"
 
       - name: Log in to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin

@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
-	ac "github.com/bshore/gha/internal/actions-core"
+	ac "github.com/js-fatigue/gha/internal/actions-core"
 )
 
 func init() { Register("build", runBuild) }

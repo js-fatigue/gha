@@ -1,4 +1,4 @@
-module github.com/bshore/gha
+module github.com/js-fatigue/gha
 
 go 1.25.0
 

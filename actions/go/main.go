@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/bshore/gha/actions/go/cmd"
-	ac "github.com/bshore/gha/internal/actions-core"
+	"github.com/js-fatigue/gha/actions/go/cmd"
+	ac "github.com/js-fatigue/gha/internal/actions-core"
 )
 
 const prCommentMarker = "<!-- go-error -->"

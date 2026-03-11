@@ -8,7 +8,7 @@ import (
 	"slices"
 	"strings"
 
-	ac "github.com/bshore/gha/internal/actions-core"
+	ac "github.com/js-fatigue/gha/internal/actions-core"
 )
 
 type ChangedDirsInput struct {

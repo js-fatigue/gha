@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: bshore/gha/actions/github@github-v0.8.0
+        uses: js-fatigue/gha/actions/github@github-v0.8.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: checkout

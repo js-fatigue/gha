@@ -6,7 +6,7 @@ set -euo pipefail
 
 COMMAND="${1:?usage: bootstrap.sh <command>}"
 
-REPO="bshore/gha"
+REPO="js-fatigue/gha"
 BINARY_NAME="go"
 CACHE_DIR="${RUNNER_TEMP:-/tmp}/actions/go"
 
