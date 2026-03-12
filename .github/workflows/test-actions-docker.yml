@@ -1,0 +1,60 @@
+name: Test Docker Actions
+
+on:
+  push:
+    branches-ignore:
+      - main
+    paths:
+      - .github/workflows/test-actions-docker.yml
+      - actions/docker/**
+      - actions/yoink/**
+
+permissions:
+  contents: read
+
+jobs:
+  test-actions-docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: js-fatigue/gha/actions/github@github-v0.8.0
+        with:
+          command: checkout
+          input: |
+            ref = "${{ github.ref_name }}"
+            fetch_depth = 0
+
+      - name: Build docker binary
+        run: |
+          mkdir -p "${RUNNER_TEMP}/actions/docker/latest"
+          go build -o "${RUNNER_TEMP}/actions/docker/latest/docker" ./actions/docker
+
+      - name: yoink
+        id: yoink
+        uses: ./actions/yoink
+
+      - name: login (source build)
+        uses: ./actions/docker
+        env:
+          ACTIONS_CACHE_URL: ${{ steps.yoink.outputs.ACTIONS_CACHE_URL }}
+          ACTIONS_RUNTIME_TOKEN: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_TOKEN }}
+          ACTIONS_RESULTS_URL: ${{ steps.yoink.outputs.ACTIONS_RESULTS_URL }}
+          ACTIONS_RUNTIME_URL: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_URL }}
+        with:
+          command: login
+          self_cache: "false"
+
+      - name: build (source build)
+        id: build
+        uses: ./actions/docker
+        env:
+          ACTIONS_CACHE_URL: ${{ steps.yoink.outputs.ACTIONS_CACHE_URL }}
+          ACTIONS_RUNTIME_TOKEN: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_TOKEN }}
+          ACTIONS_RESULTS_URL: ${{ steps.yoink.outputs.ACTIONS_RESULTS_URL }}
+          ACTIONS_RUNTIME_URL: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_URL }}
+        with:
+          command: build
+          self_cache: "false"
+          input: |
+            context = "images/yoink"
+            tags    = ["docker-actions-test:${{ github.sha }}"]
