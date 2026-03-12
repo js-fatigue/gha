@@ -7,6 +7,7 @@ Runs AWS-specific commands via a compiled Go binary. Currently supports GitHub O
 | Command | Description |
 |---------|-------------|
 | `assume-role` | Exchanges a GitHub OIDC token for temporary AWS credentials via `sts:AssumeRoleWithWebIdentity` |
+| `ecr-login` | Authenticates Docker with an ECR registry using `aws ecr get-login-password` |
 
 ## Inputs
 
@@ -33,11 +34,21 @@ Both JSON (`{"role": "arn:aws:iam::..."}`) and HCL (`role = "arn:aws:iam::..."`)
 | `duration` | int | `3600` | Credential lifetime in seconds (min 900, max 43200 unless role allows longer) |
 | `audience` | string | `"sts.amazonaws.com"` | OIDC audience claim. Override only if your IAM trust policy requires a custom audience |
 
+### `input` — `ecr-login` command
+
+All fields are optional when `assume-role` has already run in the same job — the region is auto-detected from the registry hostname or `AWS_REGION`.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `registry` | string | — | **Required.** ECR registry URI. Accepts the full image URI (e.g. `123456789012.dkr.ecr.us-east-2.amazonaws.com/repo`) or just the hostname; the repo path is ignored for login purposes |
+| `region` | string | `"auto-detected"` | AWS region. Auto-detected from the `dkr.ecr.<region>.amazonaws.com` hostname pattern, then from `AWS_REGION` env var |
+
 ## Outputs
 
 | Output | Description |
 |--------|-------------|
-| `aws_region` | The AWS region used for the assumed role session |
+| `aws_region` | The AWS region used for the assumed role session (only set when `command=assume-role`) |
+| `registry` | The ECR registry hostname that was logged in to (only set when `command=ecr-login`) |
 
 The command also exports these environment variables for all subsequent steps:
 
@@ -113,13 +124,12 @@ jobs:
             region = "us-east-1"
 
       - name: Login to ECR
-        uses: js-fatigue/gha/actions/docker@docker-v1.0.0
+        uses: js-fatigue/gha/actions/aws@aws-v1.0.0
+        id: ecr
         with:
-          command: login
+          command: ecr-login
           input: |
-            registry = "123456789012.dkr.ecr.us-east-1.amazonaws.com"
-            username = "AWS"
-            password = "${{ env.AWS_SESSION_TOKEN }}"
+            registry = "123456789012.dkr.ecr.us-east-1.amazonaws.com/my-image"
 
       - uses: js-fatigue/gha/actions/docker@docker-v1.0.0
         with:

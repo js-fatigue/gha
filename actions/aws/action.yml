@@ -28,6 +28,9 @@ outputs:
   aws_region:
     description: The AWS region used for the assumed role session
     value: ${{ steps.run.outputs.aws_region }}
+  registry:
+    description: The ECR registry hostname that was logged in to (only set when command=ecr-login)
+    value: ${{ steps.run.outputs.registry }}
 
 runs:
   using: composite
