@@ -1,0 +1,62 @@
+name: Test AWS Actions
+
+on:
+  push:
+    branches-ignore:
+      - main
+    paths:
+      - .github/workflows/test-actions-aws.yml
+      - actions/aws/**
+      - actions/yoink/**
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  test-actions-aws:
+    runs-on: ubuntu-latest
+    environment: test
+    steps:
+      - name: Checkout
+        uses: js-fatigue/gha/actions/github@github-v0.8.0
+        with:
+          command: checkout
+          input: |
+            ref = "${{ github.ref_name }}"
+            fetch_depth = 0
+
+      - name: Build aws binary
+        run: |
+          mkdir -p "${RUNNER_TEMP}/actions/aws/latest"
+          go build -o "${RUNNER_TEMP}/actions/aws/latest/aws" ./actions/aws
+
+      - name: yoink
+        id: yoink
+        uses: ./actions/yoink
+
+      - name: assume-role (source build)
+        uses: ./actions/aws
+        env:
+          ACTIONS_CACHE_URL: ${{ steps.yoink.outputs.ACTIONS_CACHE_URL }}
+          ACTIONS_RUNTIME_TOKEN: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_TOKEN }}
+          ACTIONS_RESULTS_URL: ${{ steps.yoink.outputs.ACTIONS_RESULTS_URL }}
+          ACTIONS_RUNTIME_URL: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_URL }}
+        with:
+          command: assume-role
+          self_cache: "false"
+          input: |
+            role = "${{ secrets.AWS_ROLE }}"
+
+      - name: ecr-login (source build)
+        uses: ./actions/aws
+        env:
+          ACTIONS_CACHE_URL: ${{ steps.yoink.outputs.ACTIONS_CACHE_URL }}
+          ACTIONS_RUNTIME_TOKEN: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_TOKEN }}
+          ACTIONS_RESULTS_URL: ${{ steps.yoink.outputs.ACTIONS_RESULTS_URL }}
+          ACTIONS_RUNTIME_URL: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_URL }}
+        with:
+          command: ecr-login
+          self_cache: "false"
+          input: |
+            registry = "${{ secrets.ECR_URI }}"

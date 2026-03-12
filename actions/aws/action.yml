@@ -1,0 +1,61 @@
+name: AWS Actions
+description: Runs AWS-specific commands via a compiled Go binary.
+
+inputs:
+  token:
+    description: GitHub token for API calls
+    required: true
+    default: ${{ github.token }}
+  command:
+    description: Command to run (e.g. assume-role)
+    required: true
+  input:
+    description: >
+      Options for the command in JSON or HCL (tfvars-style) format. Auto-detected by leading '{'.
+      Fields vary by command — see README for per-command schemas.
+      All fields have sane defaults; omit entirely for standard usage.
+    required: false
+    default: ""
+  self_cache:
+    description: >
+      When true (default), the binary self-caches via the Actions cache API
+      after first download. Set to false when the binary is built from source
+      in the same job.
+    required: false
+    default: "true"
+
+outputs:
+  aws_region:
+    description: The AWS region used for the assumed role session
+    value: ${{ steps.run.outputs.aws_region }}
+  registry:
+    description: The ECR registry hostname that was logged in to (only set when command=ecr-login)
+    value: ${{ steps.run.outputs.registry }}
+
+runs:
+  using: composite
+  steps:
+    - id: version
+      if: inputs.self_cache == 'true'
+      shell: bash
+      run: |
+        v=$(basename "$(dirname "$(dirname "${{ github.action_path }}")")")
+        echo "tag=${v}" >> "$GITHUB_OUTPUT"
+
+    - id: yoink
+      uses: js-fatigue/gha/actions/yoink@main
+
+    - id: run
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+        INPUT_INPUT: ${{ inputs.input }}
+        GHA_AWS_VERSION: ${{ steps.version.outputs.tag }}
+        INPUT_SELF_CACHE: ${{ inputs.self_cache }}
+        ACTIONS_CACHE_URL: ${{ steps.yoink.outputs.ACTIONS_CACHE_URL }}
+        ACTIONS_RUNTIME_TOKEN: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_TOKEN }}
+        ACTIONS_RESULTS_URL: ${{ steps.yoink.outputs.ACTIONS_RESULTS_URL }}
+        ACTIONS_RUNTIME_URL: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_URL }}
+      run: |
+        chmod +x ${{ github.action_path }}/scripts/bootstrap.sh
+        ${{ github.action_path }}/scripts/bootstrap.sh "${{ inputs.command }}"
