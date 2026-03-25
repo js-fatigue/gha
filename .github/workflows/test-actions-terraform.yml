@@ -1,0 +1,152 @@
+name: Test Terraform Actions
+
+on:
+  push:
+    branches-ignore:
+      - main
+    paths:
+      - .github/workflows/test-actions-terraform.yml
+      - actions/terraform/**
+      - actions/yoink/**
+
+permissions:
+  contents: read
+
+jobs:
+  test-actions-terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: js-fatigue/gha/actions/github@github-v0.8.0
+        with:
+          command: checkout
+          input: |
+            ref = "${{ github.ref_name }}"
+            fetch_depth = 0
+
+      - name: Build terraform binary
+        run: |
+          mkdir -p "${RUNNER_TEMP}/actions/terraform/latest"
+          go build -o "${RUNNER_TEMP}/actions/terraform/latest/terraform" ./actions/terraform
+
+      - name: yoink
+        id: yoink
+        uses: ./actions/yoink
+
+      - name: setup (source build)
+        id: setup
+        uses: ./actions/terraform
+        env:
+          ACTIONS_CACHE_URL: ${{ steps.yoink.outputs.ACTIONS_CACHE_URL }}
+          ACTIONS_RUNTIME_TOKEN: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_TOKEN }}
+          ACTIONS_RESULTS_URL: ${{ steps.yoink.outputs.ACTIONS_RESULTS_URL }}
+          ACTIONS_RUNTIME_URL: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_URL }}
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: setup
+          self_cache: "false"
+          input: |
+            {
+              "terraform_version": "1.7.0",
+              "tflint_version": "0.61.0",
+              "checkov_version": "3.2.508"
+            }
+
+      - name: Verify tool versions
+        run: |
+          echo "terraform_version=${{ steps.setup.outputs.terraform_version }}"
+          echo "tflint_version=${{ steps.setup.outputs.tflint_version }}"
+          echo "checkov_version=${{ steps.setup.outputs.checkov_version }}"
+          terraform version
+          tflint --version
+          checkov --version
+
+      - name: init (source build)
+        uses: ./actions/terraform
+        env:
+          ACTIONS_CACHE_URL: ${{ steps.yoink.outputs.ACTIONS_CACHE_URL }}
+          ACTIONS_RUNTIME_TOKEN: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_TOKEN }}
+          ACTIONS_RESULTS_URL: ${{ steps.yoink.outputs.ACTIONS_RESULTS_URL }}
+          ACTIONS_RUNTIME_URL: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_URL }}
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: init
+          self_cache: "false"
+          input: |
+            working_directory = "${{ github.workspace }}/testing/terraform/tf-test"
+
+  test-lint-findings:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: js-fatigue/gha/actions/github@github-v0.8.0
+        with:
+          command: checkout
+          input: |
+            ref = "${{ github.ref_name }}"
+            fetch_depth = 0
+
+      - name: Build terraform binary
+        run: |
+          mkdir -p "${RUNNER_TEMP}/actions/terraform/latest"
+          go build -o "${RUNNER_TEMP}/actions/terraform/latest/terraform" ./actions/terraform
+
+      - name: yoink
+        id: yoink
+        uses: ./actions/yoink
+
+      - name: setup (source build)
+        id: setup
+        uses: ./actions/terraform
+        env:
+          ACTIONS_CACHE_URL: ${{ steps.yoink.outputs.ACTIONS_CACHE_URL }}
+          ACTIONS_RUNTIME_TOKEN: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_TOKEN }}
+          ACTIONS_RESULTS_URL: ${{ steps.yoink.outputs.ACTIONS_RESULTS_URL }}
+          ACTIONS_RUNTIME_URL: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_URL }}
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: setup
+          self_cache: "false"
+          input: |
+            {
+              "terraform_version": "1.7.0",
+              "tflint_version": "0.61.0",
+              "checkov_version": "3.2.508"
+            }
+
+      - name: init — lint warns, init succeeds
+        uses: ./actions/terraform
+        env:
+          ACTIONS_CACHE_URL: ${{ steps.yoink.outputs.ACTIONS_CACHE_URL }}
+          ACTIONS_RUNTIME_TOKEN: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_TOKEN }}
+          ACTIONS_RESULTS_URL: ${{ steps.yoink.outputs.ACTIONS_RESULTS_URL }}
+          ACTIONS_RUNTIME_URL: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_URL }}
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: init
+          self_cache: "false"
+          input: |
+            {
+              "working_directory": "${{ github.workspace }}/testing/terraform/tf-lint-test",
+              "lint": true,
+              "lint_fail_on_findings": false
+            }
+
+      - name: init — lint fails fast, init skipped
+        continue-on-error: true
+        uses: ./actions/terraform
+        env:
+          ACTIONS_CACHE_URL: ${{ steps.yoink.outputs.ACTIONS_CACHE_URL }}
+          ACTIONS_RUNTIME_TOKEN: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_TOKEN }}
+          ACTIONS_RESULTS_URL: ${{ steps.yoink.outputs.ACTIONS_RESULTS_URL }}
+          ACTIONS_RUNTIME_URL: ${{ steps.yoink.outputs.ACTIONS_RUNTIME_URL }}
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          command: init
+          self_cache: "false"
+          input: |
+            {
+              "working_directory": "${{ github.workspace }}/testing/terraform/tf-checkov-test",
+              "lint": true,
+              "lint_fail_on_findings": true
+            }

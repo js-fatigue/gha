@@ -17,6 +17,8 @@ go build ./...
 # Build a specific action binary
 go build -o actions/github/github ./actions/github
 go build -o actions/go/go ./actions/go
+go build -o actions/docker/docker ./actions/docker
+go build -o actions/aws/aws ./actions/aws
 
 # Run all tests
 go test ./...
@@ -41,7 +43,9 @@ A Go port of the TypeScript `@actions/core` and `@actions/github` packages. Impo
 |------|---------|
 | `core.go` | Inputs (`GetInput`, `GetBooleanInput`, `GetMultilineInput`), outputs (`SetOutput`), logging (`Debug`, `Info`, `Warning`, `Error`, `Notice`), log groups (`Group`), environment (`ExportVariable`, `AddPath`), secrets (`SetSecret`), state (`SaveState`/`GetState`), exit (`SetFailed`, `Exit`) |
 | `context.go` | Reads `GITHUB_*` env vars into a `Context` struct; parses the webhook payload from `GITHUB_EVENT_PATH`; provides `ctx.Repo()` and `ctx.Issue()` helpers |
-| `rest.go` | `NewClient()` — returns an authenticated `*github.Client` (via `go-github/v68`) using `GITHUB_TOKEN`; GHES-aware |
+| `rest.go` | `NewClient()` — returns an authenticated `*github.Client` (via `go-github/v84`) using `GITHUB_TOKEN`; GHES-aware |
+| `cache.go` | Actions cache API (restore/save) and `SelfCacheBinary()` — used by every family's bootstrap flow via the `cache` command |
+| `exec.go` | `RunCommand()` — thin wrapper around `exec.Cmd` for running shell commands from Go |
 | `summary.go` | Fluent builder for job step summaries written to `GITHUB_STEP_SUMMARY`; use the package-level `ac.JobSummary` instance |
 | `comments.go` | `UpsertPRComment(ctx, marker, body)` and `DeletePRComment(ctx, marker)` — idempotent PR comment management via HTML marker strings |
 
@@ -79,6 +83,20 @@ func init() { Register("command-name", runCommand) }
 |---------|-------------|
 | `build` | Wraps `go build`; inputs: `working_directory`, `output`, `ldflags`, `cgo_enabled`; output: `binary_path` |
 | `setup` | Installs Go from go.dev; restores/saves `~/go/pkg/mod` module cache when `cache_go_modules=true` |
+
+#### Current family: `docker`
+
+| Command | Description |
+|---------|-------------|
+| `build` | Wraps `docker buildx build`; inputs: `image`, `tags`, `context`, `dockerfile`, `build_args`, `platforms`, `push` |
+| `login` | Authenticates Docker with a container registry; inputs: `registry`, `username`, `password` |
+
+#### Current family: `aws`
+
+| Command | Description |
+|---------|-------------|
+| `assume-role` | Exchanges a GitHub OIDC token for temporary AWS credentials via STS; outputs: `access_key_id`, `secret_access_key`, `session_token` |
+| `ecr-login` | Authenticates Docker with an ECR registry; inputs: `region`, `account_id` |
 
 The `main.go` pattern:
 1. `defer ac.Exit()` at top of `main()`
@@ -175,7 +193,7 @@ All shell scripts (`*.sh`) and text files must use LF line endings. CRLF causes 
 
 ## CI
 
-Six workflow files in `.github/workflows/`:
+Nine workflow files in `.github/workflows/`:
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
@@ -184,6 +202,9 @@ Six workflow files in `.github/workflows/`:
 | `deploy-yoink.yml` | Push to `main` (paths: `images/yoink/**`) | Builds and publishes the `yoink` Docker image to GHCR |
 | `test-actions-github.yml` | Push to non-main branches (paths: `actions/github/**`, `actions/yoink/**`) | Integration tests for the `github` action family |
 | `test-actions-go.yml` | Push to non-main branches (paths: `actions/go/**`, `actions/yoink/**`) | Integration tests for the `go` action family |
+| `test-actions-docker.yml` | Push to non-main branches (paths: `actions/docker/**`, `actions/yoink/**`) | Integration tests for the `docker` action family |
+| `test-actions-aws.yml` | Push to non-main branches (paths: `actions/aws/**`, `actions/yoink/**`) | Integration tests for the `aws` action family |
+| `test-ecr-push.yml` | Push to non-main branches (paths: `actions/aws/**`, `actions/docker/**`, `actions/yoink/**`) | End-to-end test: assume-role → ecr-login → docker build+push to ECR |
 | `test-actions-yoink.yml` | Push to non-main branches (paths: `images/yoink/**`) | Integration tests for the `yoink` Docker action |
 
 All CI workflows pass `self_cache: "false"` to action steps because the binary is built from source earlier in the same job.
@@ -203,7 +224,7 @@ Project-level skills live in `.claude/skills/` and are invoked via the Skill too
 
 ```
 module github.com/js-fatigue/gha
-go 1.23.4
+go 1.25.0
 ```
 
-Dependencies: `github.com/google/go-github/v68` for the REST client.
+Dependencies: `github.com/google/go-github/v84` for the REST client; `github.com/hashicorp/hcl/v2` + `github.com/zclconf/go-cty` for HCL-format `input` parsing.
