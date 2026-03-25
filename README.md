@@ -8,6 +8,8 @@ A Go-based framework for writing GitHub Actions. Replaces bash/Python/JavaScript
 |--------|-------------|
 | [`github`](actions/github/README.md) | GitHub-specific commands: PR title validation, changed-dirs detection, releases, checkout |
 | [`go`](actions/go/README.md) | Go toolchain commands: build, setup, cache |
+| [`docker`](actions/docker/README.md) | Docker commands: build images, login to registries |
+| [`aws`](actions/aws/README.md) | AWS commands: assume IAM role via OIDC, ECR login |
 | [`yoink`](actions/yoink/README.md) | Minimal Docker action that captures Actions cache service env vars for composite steps |
 
 ## High-level Overview
@@ -24,9 +26,7 @@ The script prepares the go binary, and executes it with the command from the act
 
 Integrate with GitHub GraphQL API when (if) needed. This would be super useful, especially if the TF Provider used it (ex: can commit [multiple files at once](https://docs.github.com/en/graphql/reference/mutations#createcommitonbranch)). No official Go client library yet, community library is [shurcooL/githubv4](https://github.com/shurcooL/githubv4)
 
-- Docker
 - Python
-- AWS
 - Terraform
 - 1Password
 - ...
